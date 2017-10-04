@@ -61,7 +61,6 @@ where
         info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
 
         // Dictionary
-        // TODO: Little-endian?
         let dict_size_provided = try!(util::read_u32_le(stream).or_else(|e| {
             Err(error::Error::LZMAError(
                 format!("LZMA header too short: {}", e),
@@ -76,8 +75,7 @@ where
         info!("Dict size: {}", dict_size);
 
         // Unpacked size
-        // TODO: endian?
-        let unpacked_size_provided = try!(util::read_u64_be(stream).or_else(|e| {
+        let unpacked_size_provided = try!(util::read_u64_le(stream).or_else(|e| {
             Err(error::Error::LZMAError(
                 format!("LZMA header too short: {}", e),
             ))

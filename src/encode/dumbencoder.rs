@@ -33,7 +33,7 @@ where
 
         // Unpacked size
         info!("Unpacked size: unknown");
-        util::write_u64_be(stream, 0xFFFF_FFFF_FFFF_FFFF)?;
+        util::write_u64_le(stream, 0xFFFF_FFFF_FFFF_FFFF)?;
 
         let encoder = Encoder {
             stream: stream::EncodeStream::new(stream)?,
