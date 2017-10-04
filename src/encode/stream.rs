@@ -1,5 +1,4 @@
 use std::io;
-use error;
 use util;
 
 pub struct EncodeStream<'a, W>
@@ -18,7 +17,7 @@ where
     W: io::Write,
 {
     pub fn new(stream: &'a mut W) -> io::Result<Self> {
-        let mut enc = Self {
+        let enc = Self {
             stream: stream,
             range: 0xFFFF_FFFF,
             low: 0,

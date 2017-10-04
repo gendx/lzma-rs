@@ -13,7 +13,7 @@ pub fn decompress<R: io::BufRead>(stream: &mut R) -> error::Result<Vec<u8>> {
     decoder.process()
 }
 
-pub fn compress<R: io::BufRead, W: io::Write>(input: &mut R, output: &mut W) -> error::Result<()> {
+pub fn compress<R: io::BufRead, W: io::Write>(input: &mut R, output: &mut W) -> io::Result<()> {
     let encoder = encode::dumbencoder::Encoder::from_stream(output)?;
     encoder.process(input)
 }

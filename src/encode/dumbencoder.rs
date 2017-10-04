@@ -1,5 +1,4 @@
 use std::io;
-use error;
 use encode::stream;
 use util;
 
@@ -7,26 +6,25 @@ pub struct Encoder<'a, W>
 where
     W: 'a + io::Write,
 {
-    dict_size: u32,
     stream: stream::EncodeStream<'a, W>,
     literal_probs: [[u16; 0x300]; 8],
     is_match: [u16; 4], // true = LZ, false = literal
 }
 
-const lc: u32 = 3;
-const lp: u32 = 0;
-const pb: u32 = 2;
+const LC: u32 = 3;
+const LP: u32 = 0;
+const PB: u32 = 2;
 
 impl<'a, W> Encoder<'a, W>
 where
     W: io::Write,
 {
-    pub fn from_stream(stream: &'a mut W) -> error::Result<Self> {
+    pub fn from_stream(stream: &'a mut W) -> io::Result<Self> {
         let dict_size = 0x800000;
 
         // Properties
-        let props = (lc + 9 * (lp + 5 * pb)) as u8;
-        info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
+        let props = (LC + 9 * (LP + 5 * PB)) as u8;
+        info!("Properties {{ lc: {}, lp: {}, pb: {} }}", LC, LP, PB);
         util::write_u8(stream, props)?;
 
         // Dictionary
@@ -38,7 +36,6 @@ where
         util::write_u64_be(stream, 0xFFFF_FFFF_FFFF_FFFF)?;
 
         let encoder = Encoder {
-            dict_size: dict_size,
             stream: stream::EncodeStream::new(stream)?,
             literal_probs: [[0x400; 0x300]; 8],
             is_match: [0x400; 4],
@@ -47,7 +44,7 @@ where
         Ok(encoder)
     }
 
-    pub fn process<R>(mut self, input: R) -> error::Result<()>
+    pub fn process<R>(mut self, input: R) -> io::Result<()>
     where
         R: io::Read,
     {
@@ -62,12 +59,11 @@ where
             // Literal
             self.stream.encode_bit(&mut self.is_match[pos_state], false)?;
 
-            self.encode_literal(byte, prev_byte, out_len)?;
+            self.encode_literal(byte, prev_byte)?;
             prev_byte = byte;
         }
 
-        self.finish(input_len + 1)?;
-        Ok(())
+        self.finish(input_len + 1)
     }
 
     fn finish(&mut self, input_len: usize) -> io::Result<()> {
@@ -102,7 +98,7 @@ where
         self.stream.finish()
     }
 
-    fn encode_literal(&mut self, byte: u8, prev_byte: u8, out_len: usize) -> io::Result<()> {
+    fn encode_literal(&mut self, byte: u8, prev_byte: u8) -> io::Result<()> {
         let prev_byte = prev_byte as usize;
 
         let mut result: usize = 1;
