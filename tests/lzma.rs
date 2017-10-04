@@ -24,7 +24,7 @@ fn round_trip_file(filename: &str) {
     round_trip(x.as_slice());
 }
 
-fn decomp_big_file(cipherfile: &str, plainfile: &str) {
+fn decomp_big_file(compfile: &str, plainfile: &str) {
     use std::io::Read;
 
     let mut expected = Vec::new();
@@ -32,7 +32,7 @@ fn decomp_big_file(cipherfile: &str, plainfile: &str) {
         .unwrap()
         .read_to_end(&mut expected)
         .unwrap();
-    let mut f = std::io::BufReader::new(std::fs::File::open(cipherfile).unwrap());
+    let mut f = std::io::BufReader::new(std::fs::File::open(compfile).unwrap());
     assert!(lzma::decompress(&mut f).unwrap() == expected)
 }
 
