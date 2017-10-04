@@ -1,0 +1,195 @@
+use std::io;
+use error;
+use util;
+
+pub struct DecodeStream<'a, R>
+where
+    R: 'a + io::BufRead,
+{
+    stream: &'a mut R,
+    range: u32,
+    code: u32,
+}
+
+impl<'a, R> DecodeStream<'a, R>
+where
+    R: io::BufRead,
+{
+    pub fn new(stream: &'a mut R) -> io::Result<Self> {
+        let mut dec = Self {
+            stream: stream,
+            range: 0xFFFF_FFFF,
+            code: 0,
+        };
+        let _ = util::read_u8(dec.stream)?;
+        dec.code = util::read_u32_be(dec.stream)?;
+        debug!("0 {{ range: {:08x}, code: {:08x} }}", dec.range, dec.code);
+        Ok(dec)
+    }
+
+    #[inline]
+    pub fn is_finished_ok(&mut self) -> io::Result<bool> {
+        Ok(self.code == 0 && (self.stream.fill_buf()?.len() == 0))
+    }
+
+    #[inline]
+    fn normalize(&mut self) -> io::Result<()> {
+        trace!(
+            "  {{ range: {:08x}, code: {:08x} }}",
+            self.range,
+            self.code
+        );
+        if self.range < 0x1000000 {
+            self.range <<= 8;
+            self.code = (self.code << 8) ^ (util::read_u8(self.stream)? as u32);
+
+            debug!(
+                "+ {{ range: {:08x}, code: {:08x} }}",
+                self.range,
+                self.code
+            );
+        }
+        Ok(())
+    }
+
+    #[inline]
+    fn get_bit(&mut self) -> error::Result<bool> {
+        self.range >>= 1;
+
+        if self.code == self.range {
+            return Err(error::Error::LZMAError(
+                String::from("Corrupted range coding"),
+            ));
+        }
+
+        let bit = self.code > self.range;
+        if bit {
+            self.code -= self.range
+        }
+
+        self.normalize()?;
+        Ok(bit)
+    }
+
+    pub fn get(&mut self, count: usize) -> error::Result<u32> {
+        let mut result = 0u32;
+        for _ in 0..count {
+            result = (result << 1) ^ (self.get_bit()? as u32)
+        }
+        Ok(result)
+    }
+
+    #[inline]
+    pub fn decode_bit(&mut self, prob: &mut u16) -> io::Result<bool> {
+        let bound: u32 = (self.range >> 11) * (*prob as u32);
+
+        trace!(
+            " bound: {:08x}, prob: {:04x}, bit: {}",
+            bound,
+            prob,
+            (self.code > bound) as u8
+        );
+        if self.code < bound {
+            *prob += (0x800_u16 - *prob) >> 5;
+            self.range = bound;
+
+            self.normalize()?;
+            Ok(false)
+        } else {
+            *prob -= *prob >> 5;
+            self.code -= bound;
+            self.range -= bound;
+
+            self.normalize()?;
+            Ok(true)
+        }
+    }
+
+    fn parse_bit_tree(&mut self, num_bits: usize, probs: &mut [u16]) -> io::Result<u32> {
+        let mut tmp: u32 = 1;
+        for _ in 0..num_bits {
+            let bit = self.decode_bit(&mut probs[tmp as usize])?;
+            tmp = (tmp << 1) ^ (bit as u32);
+        }
+        Ok(tmp - (1 << num_bits))
+    }
+
+    pub fn parse_reverse_bit_tree(
+        &mut self,
+        num_bits: usize,
+        probs: &mut [u16],
+        offset: usize,
+    ) -> io::Result<u32> {
+        let mut result = 0u32;
+        let mut tmp: usize = 1;
+        for i in 0..num_bits {
+            let bit = self.decode_bit(&mut probs[offset + tmp])?;
+            tmp = (tmp << 1) ^ (bit as usize);
+            result ^= (bit as u32) << i;
+        }
+        Ok(result)
+    }
+}
+
+#[derive(Clone)]
+pub struct BitTree {
+    num_bits: usize,
+    probs: Vec<u16>,
+}
+
+impl BitTree {
+    pub fn new(num_bits: usize) -> Self {
+        BitTree {
+            num_bits: num_bits,
+            probs: vec![0x400; 1 << num_bits],
+        }
+    }
+
+    pub fn parse<R: io::BufRead>(&mut self, stream: &mut DecodeStream<R>) -> io::Result<u32> {
+        stream.parse_bit_tree(self.num_bits, self.probs.as_mut_slice())
+    }
+
+    pub fn parse_reverse<R: io::BufRead>(
+        &mut self,
+        stream: &mut DecodeStream<R>,
+    ) -> io::Result<u32> {
+        stream.parse_reverse_bit_tree(self.num_bits, self.probs.as_mut_slice(), 0)
+    }
+}
+
+
+pub struct LenDecoder {
+    choice: u16,
+    choice2: u16,
+    low_coder: Vec<BitTree>,
+    mid_coder: Vec<BitTree>,
+    high_coder: BitTree,
+}
+
+impl LenDecoder {
+    pub fn new() -> Self {
+        LenDecoder {
+            choice: 0x400,
+            choice2: 0x400,
+            low_coder: vec![BitTree::new(3); 16],
+            mid_coder: vec![BitTree::new(3); 16],
+            high_coder: BitTree::new(8),
+        }
+    }
+
+    pub fn decode<R: io::BufRead>(
+        &mut self,
+        stream: &mut DecodeStream<R>,
+        pos_state: usize,
+    ) -> io::Result<usize> {
+        if !stream.decode_bit(&mut self.choice)? {
+            Ok(self.low_coder[pos_state].parse(stream)? as usize)
+        } else {
+            if !stream.decode_bit(&mut self.choice2)? {
+                Ok(self.mid_coder[pos_state].parse(stream)? as usize + 8)
+            } else {
+                Ok(self.high_coder.parse(stream)? as usize + 16)
+            }
+        }
+    }
+}
