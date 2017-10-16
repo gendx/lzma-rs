@@ -1,2 +1,2 @@
 pub mod dumbencoder;
-mod stream;
+mod rangecoder;

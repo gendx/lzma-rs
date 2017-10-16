@@ -1,2 +1,2 @@
-mod stream;
 pub mod decoder;
+mod rangecoder;

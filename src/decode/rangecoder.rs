@@ -2,7 +2,7 @@ use std::io;
 use error;
 use util;
 
-pub struct DecodeStream<'a, R>
+pub struct RangeDecoder<'a, R>
 where
     R: 'a + io::BufRead,
 {
@@ -11,7 +11,7 @@ where
     code: u32,
 }
 
-impl<'a, R> DecodeStream<'a, R>
+impl<'a, R> RangeDecoder<'a, R>
 where
     R: io::BufRead,
 {
@@ -131,6 +131,7 @@ where
     }
 }
 
+// TODO: parametrize by constant and use [u16; 1 << num_bits] as soon as Rust supports this
 #[derive(Clone)]
 pub struct BitTree {
     num_bits: usize,
@@ -145,15 +146,15 @@ impl BitTree {
         }
     }
 
-    pub fn parse<R: io::BufRead>(&mut self, stream: &mut DecodeStream<R>) -> io::Result<u32> {
-        stream.parse_bit_tree(self.num_bits, self.probs.as_mut_slice())
+    pub fn parse<R: io::BufRead>(&mut self, rangecoder: &mut RangeDecoder<R>) -> io::Result<u32> {
+        rangecoder.parse_bit_tree(self.num_bits, self.probs.as_mut_slice())
     }
 
     pub fn parse_reverse<R: io::BufRead>(
         &mut self,
-        stream: &mut DecodeStream<R>,
+        rangecoder: &mut RangeDecoder<R>,
     ) -> io::Result<u32> {
-        stream.parse_reverse_bit_tree(self.num_bits, self.probs.as_mut_slice(), 0)
+        rangecoder.parse_reverse_bit_tree(self.num_bits, self.probs.as_mut_slice(), 0)
     }
 }
 
@@ -179,16 +180,16 @@ impl LenDecoder {
 
     pub fn decode<R: io::BufRead>(
         &mut self,
-        stream: &mut DecodeStream<R>,
+        rangecoder: &mut RangeDecoder<R>,
         pos_state: usize,
     ) -> io::Result<usize> {
-        if !stream.decode_bit(&mut self.choice)? {
-            Ok(self.low_coder[pos_state].parse(stream)? as usize)
+        if !rangecoder.decode_bit(&mut self.choice)? {
+            Ok(self.low_coder[pos_state].parse(rangecoder)? as usize)
         } else {
-            if !stream.decode_bit(&mut self.choice2)? {
-                Ok(self.mid_coder[pos_state].parse(stream)? as usize + 8)
+            if !rangecoder.decode_bit(&mut self.choice2)? {
+                Ok(self.mid_coder[pos_state].parse(rangecoder)? as usize + 8)
             } else {
-                Ok(self.high_coder.parse(stream)? as usize + 16)
+                Ok(self.high_coder.parse(rangecoder)? as usize + 16)
             }
         }
     }

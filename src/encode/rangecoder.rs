@@ -1,7 +1,7 @@
 use std::io;
 use util;
 
-pub struct EncodeStream<'a, W>
+pub struct RangeEncoder<'a, W>
 where
     W: 'a + io::Write,
 {
@@ -12,7 +12,7 @@ where
     cachesz: u32,
 }
 
-impl<'a, W> EncodeStream<'a, W>
+impl<'a, W> RangeEncoder<'a, W>
 where
     W: io::Write,
 {

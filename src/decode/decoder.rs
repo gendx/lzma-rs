@@ -1,6 +1,6 @@
 use std::io;
 use error;
-use decode::stream;
+use decode::rangecoder;
 use util;
 
 pub struct Decoder<'a, R>
@@ -14,10 +14,10 @@ where
     pb: u32, // 0..4
     dict_size: u32,
     unpacked_size: Option<u64>,
-    stream: stream::DecodeStream<'a, R>,
+    rangecoder: rangecoder::RangeDecoder<'a, R>,
     literal_probs: Vec<Vec<u16>>,
-    pos_slot_decoder: Vec<stream::BitTree>,
-    align_decoder: stream::BitTree,
+    pos_slot_decoder: Vec<rangecoder::BitTree>,
+    align_decoder: rangecoder::BitTree,
     pos_decoders: [u16; 115],
     output: Vec<u8>, // TODO: buffer this
     is_match: [u16; 192], // true = LZ, false = literal
@@ -28,8 +28,8 @@ where
     is_rep_0long: [u16; 192],
     state: usize,
     rep: [usize; 4],
-    len_decoder: stream::LenDecoder,
-    rep_len_decoder: stream::LenDecoder,
+    len_decoder: rangecoder::LenDecoder,
+    rep_len_decoder: rangecoder::LenDecoder,
 }
 
 impl<'a, R> Decoder<'a, R>
@@ -96,14 +96,14 @@ where
             pb: pb,
             dict_size: dict_size,
             unpacked_size: unpacked_size,
-            stream: try!(stream::DecodeStream::new(stream).or_else(|e| {
+            rangecoder: try!(rangecoder::RangeDecoder::new(stream).or_else(|e| {
                 Err(error::Error::LZMAError(
                     format!("LZMA stream too short: {}", e),
                 ))
             })),
             literal_probs: vec![vec![0x400; 0x300]; 1 << (lc + lp)],
-            pos_slot_decoder: vec![stream::BitTree::new(6); 4],
-            align_decoder: stream::BitTree::new(4),
+            pos_slot_decoder: vec![rangecoder::BitTree::new(6); 4],
+            align_decoder: rangecoder::BitTree::new(4),
             pos_decoders: [0x400; 115],
             output: Vec::new(),
             is_match: [0x400; 192],
@@ -114,8 +114,8 @@ where
             is_rep_0long: [0x400; 192],
             state: 0,
             rep: [0; 4],
-            len_decoder: stream::LenDecoder::new(),
-            rep_len_decoder: stream::LenDecoder::new(),
+            len_decoder: rangecoder::LenDecoder::new(),
+            rep_len_decoder: rangecoder::LenDecoder::new(),
         };
 
         Ok(decoder)
@@ -146,7 +146,7 @@ where
     pub fn process(mut self) -> error::Result<Vec<u8>> {
         loop {
             if let Some(_) = self.unpacked_size {
-                if self.stream.is_finished_ok()? {
+                if self.rangecoder.is_finished_ok()? {
                     break;
                 }
             }
@@ -154,9 +154,10 @@ where
             let pos_state = self.output.len() & ((1 << self.pb) - 1);
 
             // Literal
-            if !self.stream.decode_bit(
+            if !self.rangecoder.decode_bit(
                 // TODO: assumes pb = 2 ??
-                &mut self.is_match[(self.state << 4) + pos_state],
+                &mut self.is_match[(self.state << 4) +
+                                       pos_state],
             )?
             {
                 let byte: u8 = self.decode_literal()?;
@@ -178,11 +179,11 @@ where
             // LZ
             let mut len: usize;
             // Distance is repeated from LRU
-            if self.stream.decode_bit(&mut self.is_rep[self.state])? {
+            if self.rangecoder.decode_bit(&mut self.is_rep[self.state])? {
                 // dist = rep[0]
-                if !self.stream.decode_bit(&mut self.is_rep_g0[self.state])? {
+                if !self.rangecoder.decode_bit(&mut self.is_rep_g0[self.state])? {
                     // len = 1
-                    if !self.stream.decode_bit(
+                    if !self.rangecoder.decode_bit(
                         &mut self.is_rep_0long[(self.state << 4) +
                                                    pos_state],
                     )?
@@ -196,10 +197,10 @@ where
                 // dist = rep[i]
                 } else {
                     let idx: usize;
-                    if !self.stream.decode_bit(&mut self.is_rep_g1[self.state])? {
+                    if !self.rangecoder.decode_bit(&mut self.is_rep_g1[self.state])? {
                         idx = 1;
                     } else {
-                        if !self.stream.decode_bit(&mut self.is_rep_g2[self.state])? {
+                        if !self.rangecoder.decode_bit(&mut self.is_rep_g2[self.state])? {
                             idx = 2;
                         } else {
                             idx = 3;
@@ -213,7 +214,7 @@ where
                     self.rep[0] = dist
                 }
 
-                len = self.rep_len_decoder.decode(&mut self.stream, pos_state)?;
+                len = self.rep_len_decoder.decode(&mut self.rangecoder, pos_state)?;
                 // update state (rep)
                 self.state = if self.state < 7 { 8 } else { 11 };
             // New distance
@@ -222,14 +223,14 @@ where
                 self.rep[3] = self.rep[2];
                 self.rep[2] = self.rep[1];
                 self.rep[1] = self.rep[0];
-                len = self.len_decoder.decode(&mut self.stream, pos_state)?;
+                len = self.len_decoder.decode(&mut self.rangecoder, pos_state)?;
 
                 // update state (match)
                 self.state = if self.state < 7 { 7 } else { 10 };
                 self.rep[0] = self.decode_distance(len)?;
 
                 if self.rep[0] == 0xFFFF_FFFF {
-                    if self.stream.is_finished_ok()? {
+                    if self.rangecoder.is_finished_ok()? {
                         break;
                     }
                     return Err(error::Error::LZMAError(String::from(
@@ -271,7 +272,7 @@ where
             while result < 0x100 {
                 let match_bit = (match_byte >> 7) & 1;
                 match_byte <<= 1;
-                let bit = self.stream.decode_bit(
+                let bit = self.rangecoder.decode_bit(
                     &mut probs[((1 + match_bit) << 8) + result],
                 )? as usize;
                 result = (result << 1) ^ bit;
@@ -282,7 +283,7 @@ where
         }
 
         while result < 0x100 {
-            result = (result << 1) ^ (self.stream.decode_bit(&mut probs[result])? as usize);
+            result = (result << 1) ^ (self.rangecoder.decode_bit(&mut probs[result])? as usize);
         }
 
         Ok((result - 0x100) as u8)
@@ -291,7 +292,7 @@ where
     fn decode_distance(&mut self, length: usize) -> error::Result<usize> {
         let len_state = if length > 3 { 3 } else { length };
 
-        let pos_slot = self.pos_slot_decoder[len_state].parse(&mut self.stream)? as usize;
+        let pos_slot = self.pos_slot_decoder[len_state].parse(&mut self.rangecoder)? as usize;
         if pos_slot < 4 {
             return Ok(pos_slot);
         }
@@ -300,14 +301,14 @@ where
         let mut result = (2 ^ (pos_slot & 1)) << num_direct_bits;
 
         if pos_slot < 14 {
-            result += self.stream.parse_reverse_bit_tree(
+            result += self.rangecoder.parse_reverse_bit_tree(
                 num_direct_bits,
                 &mut self.pos_decoders,
                 result - pos_slot,
             )? as usize;
         } else {
-            result += (self.stream.get(num_direct_bits - 4)? as usize) << 4;
-            result += self.align_decoder.parse_reverse(&mut self.stream)? as usize;
+            result += (self.rangecoder.get(num_direct_bits - 4)? as usize) << 4;
+            result += self.align_decoder.parse_reverse(&mut self.rangecoder)? as usize;
         }
 
         Ok(result)
