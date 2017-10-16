@@ -10,7 +10,9 @@ fn round_trip(x: &[u8]) {
     info!("Compressed {} -> {} bytes", x.len(), compressed.len());
     debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
-    assert_eq!(lzma::decompress(&mut bf).unwrap(), x)
+    let mut decomp: Vec<u8> = Vec::new();
+    lzma::decompress(&mut bf, &mut decomp).unwrap();
+    assert_eq!(decomp, x)
 }
 
 fn round_trip_file(filename: &str) {
@@ -33,15 +35,21 @@ fn decomp_big_file(compfile: &str, plainfile: &str) {
         .read_to_end(&mut expected)
         .unwrap();
     let mut f = std::io::BufReader::new(std::fs::File::open(compfile).unwrap());
-    assert!(lzma::decompress(&mut f).unwrap() == expected)
+    let mut decomp: Vec<u8> = Vec::new();
+    lzma::decompress(&mut f, &mut decomp).unwrap();
+    assert!(decomp == expected)
 }
 
 #[test]
 fn decompress_short_header() {
     let _ = env_logger::init();
+    let mut decomp: Vec<u8> = Vec::new();
     // TODO: compare io::Errors?
     assert_eq!(
-        format!("{:?}", lzma::decompress(&mut "".as_bytes()).unwrap_err()),
+        format!(
+            "{:?}",
+            lzma::decompress(&mut "".as_bytes(), &mut decomp).unwrap_err()
+        ),
         String::from(
             "LZMAError(\"LZMA header too short: failed to fill whole buffer\")",
         )
@@ -78,83 +86,77 @@ fn big_file() {
 #[test]
 fn decompress_empty_world() {
     let _ = env_logger::init();
-    assert_eq!(
-        {
-            let mut x: &[u8] = &[
-                0x5d,
-                0x00,
-                0x00,
-                0x80,
-                0x00,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0x00,
-                0x83,
-                0xff,
-                0xfb,
-                0xff,
-                0xff,
-                0xc0,
-                0x00,
-                0x00,
-                0x00,
-            ];
-            lzma::decompress(&mut x).unwrap()
-        },
-        b""
-    )
+    let mut x: &[u8] = &[
+        0x5d,
+        0x00,
+        0x00,
+        0x80,
+        0x00,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0x00,
+        0x83,
+        0xff,
+        0xfb,
+        0xff,
+        0xff,
+        0xc0,
+        0x00,
+        0x00,
+        0x00,
+    ];
+    let mut decomp: Vec<u8> = Vec::new();
+    lzma::decompress(&mut x, &mut decomp).unwrap();
+    assert_eq!(decomp, b"")
 }
 
 #[test]
 fn decompress_hello_world() {
     let _ = env_logger::init();
-    assert_eq!(
-        {
-            let mut x: &[u8] = &[
-                0x5d,
-                0x00,
-                0x00,
-                0x80,
-                0x00,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0xff,
-                0x00,
-                0x24,
-                0x19,
-                0x49,
-                0x98,
-                0x6f,
-                0x10,
-                0x19,
-                0xc6,
-                0xd7,
-                0x31,
-                0xeb,
-                0x36,
-                0x50,
-                0xb2,
-                0x98,
-                0x48,
-                0xff,
-                0xfe,
-                0xa5,
-                0xb0,
-                0x00,
-            ];
-            lzma::decompress(&mut x).unwrap()
-        },
-        b"Hello world\x0a"
-    )
+    let mut x: &[u8] = &[
+        0x5d,
+        0x00,
+        0x00,
+        0x80,
+        0x00,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0x00,
+        0x24,
+        0x19,
+        0x49,
+        0x98,
+        0x6f,
+        0x10,
+        0x19,
+        0xc6,
+        0xd7,
+        0x31,
+        0xeb,
+        0x36,
+        0x50,
+        0xb2,
+        0x98,
+        0x48,
+        0xff,
+        0xfe,
+        0xa5,
+        0xb0,
+        0x00,
+    ];
+    let mut decomp: Vec<u8> = Vec::new();
+    lzma::decompress(&mut x, &mut decomp).unwrap();
+    assert_eq!(decomp, b"Hello world\x0a")
 }

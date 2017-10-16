@@ -16,7 +16,7 @@ impl<'a, W> RangeEncoder<'a, W>
 where
     W: io::Write,
 {
-    pub fn new(stream: &'a mut W) -> io::Result<Self> {
+    pub fn new(stream: &'a mut W) -> Self {
         let enc = Self {
             stream: stream,
             range: 0xFFFF_FFFF,
@@ -25,7 +25,7 @@ where
             cachesz: 1,
         };
         debug!("0 {{ range: {:08x}, low: {:010x} }}", enc.range, enc.low);
-        Ok(enc)
+        enc
     }
 
     fn write_low(&mut self) -> io::Result<()> {

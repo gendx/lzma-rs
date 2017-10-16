@@ -8,8 +8,11 @@ mod util;
 
 use std::io;
 
-pub fn decompress<R: io::BufRead>(stream: &mut R) -> error::Result<Vec<u8>> {
-    let decoder = decode::decoder::Decoder::from_stream(stream)?;
+pub fn decompress<R: io::BufRead, W: io::Write>(
+    input: &mut R,
+    output: &mut W,
+) -> error::Result<()> {
+    let decoder = decode::decoder::Decoder::from_stream(input, output)?;
     decoder.process()
 }
 

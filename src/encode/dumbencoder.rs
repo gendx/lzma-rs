@@ -36,7 +36,7 @@ where
         util::write_u64_le(stream, 0xFFFF_FFFF_FFFF_FFFF)?;
 
         let encoder = Encoder {
-            rangecoder: rangecoder::RangeEncoder::new(stream)?,
+            rangecoder: rangecoder::RangeEncoder::new(stream),
             literal_probs: [[0x400; 0x300]; 8],
             is_match: [0x400; 4],
         };

@@ -1,25 +1,26 @@
 use std::io;
 use error;
+use decode::lzbuffer;
 use decode::rangecoder;
 use util;
 
-pub struct Decoder<'a, R>
+pub struct Decoder<'a, R, W>
 where
     R: 'a + io::BufRead,
+    W: 'a + io::Write,
 {
     // most lc significant bits of previous byte are part of the literal context
     lc: u32, // 0..8
     lp: u32, // 0..4
     // context for literal/match is plaintext offset modulo 2^pb
     pb: u32, // 0..4
-    dict_size: u32,
     unpacked_size: Option<u64>,
     rangecoder: rangecoder::RangeDecoder<'a, R>,
     literal_probs: Vec<Vec<u16>>,
     pos_slot_decoder: Vec<rangecoder::BitTree>,
     align_decoder: rangecoder::BitTree,
     pos_decoders: [u16; 115],
-    output: Vec<u8>, // TODO: buffer this
+    output: lzbuffer::LZBuffer<'a, W>,
     is_match: [u16; 192], // true = LZ, false = literal
     is_rep: [u16; 12],
     is_rep_g0: [u16; 12],
@@ -32,12 +33,13 @@ where
     rep_len_decoder: rangecoder::LenDecoder,
 }
 
-impl<'a, R> Decoder<'a, R>
+impl<'a, R, W> Decoder<'a, R, W>
 where
     R: io::BufRead,
+    W: io::Write,
 {
     // Read LZMA header and initialize decoder
-    pub fn from_stream(stream: &'a mut R) -> error::Result<Self> {
+    pub fn from_stream(stream: &'a mut R, output: &'a mut W) -> error::Result<Self> {
         // Properties
         let props = try!(util::read_u8(stream).or_else(|e| {
             Err(error::Error::LZMAError(
@@ -94,7 +96,6 @@ where
             lc: lc,
             lp: lp,
             pb: pb,
-            dict_size: dict_size,
             unpacked_size: unpacked_size,
             rangecoder: try!(rangecoder::RangeDecoder::new(stream).or_else(|e| {
                 Err(error::Error::LZMAError(
@@ -105,7 +106,7 @@ where
             pos_slot_decoder: vec![rangecoder::BitTree::new(6); 4],
             align_decoder: rangecoder::BitTree::new(4),
             pos_decoders: [0x400; 115],
-            output: Vec::new(),
+            output: lzbuffer::LZBuffer::from_stream(output, dict_size as usize),
             is_match: [0x400; 192],
             is_rep: [0x400; 12],
             is_rep_g0: [0x400; 12],
@@ -121,29 +122,7 @@ where
         Ok(decoder)
     }
 
-    fn append_lz(&mut self, len: usize, dist: usize) -> error::Result<()> {
-        debug!("LZ {{ len: {}, dist: {} }}", len, dist);
-        if dist > self.output.len() {
-            return Err(error::Error::LZMAError(
-                String::from("LZ distance before input"),
-            ));
-        }
-        if dist > (self.dict_size as usize) {
-            return Err(error::Error::LZMAError(format!(
-                "LZ distance {} is beyond dictionary size {}",
-                dist,
-                self.dict_size
-            )));
-        }
-        let offset = self.output.len() - dist;
-        for i in 0..len {
-            let x = self.output[offset + i];
-            self.output.push(x)
-        }
-        Ok(())
-    }
-
-    pub fn process(mut self) -> error::Result<Vec<u8>> {
+    pub fn process(mut self) -> error::Result<()> {
         loop {
             if let Some(_) = self.unpacked_size {
                 if self.rangecoder.is_finished_ok()? {
@@ -162,7 +141,7 @@ where
             {
                 let byte: u8 = self.decode_literal()?;
                 debug!("Literal: {}", byte);
-                self.output.push(byte);
+                self.output.append_literal(byte)?;
 
                 self.state = if self.state < 4 {
                     0
@@ -191,7 +170,7 @@ where
                         // update state (short rep)
                         self.state = if self.state < 7 { 9 } else { 11 };
                         let dist = self.rep[0] + 1;
-                        self.append_lz(1, dist)?;
+                        self.output.append_lz(1, dist)?;
                         continue;
                     }
                 // dist = rep[i]
@@ -242,7 +221,7 @@ where
             len += 2;
 
             let dist = self.rep[0] + 1;
-            self.append_lz(len, dist)?;
+            self.output.append_lz(len, dist)?;
         }
 
         if let Some(len) = self.unpacked_size {
@@ -254,12 +233,14 @@ where
                 )));
             }
         }
-        Ok(self.output)
+
+        self.output.finish()?;
+        Ok(())
     }
 
-    fn decode_literal(&mut self) -> io::Result<u8> {
+    fn decode_literal(&mut self) -> error::Result<u8> {
         let def_prev_byte = 0u8;
-        let prev_byte = *self.output.last().unwrap_or(&def_prev_byte) as usize;
+        let prev_byte = self.output.last_or(def_prev_byte) as usize;
 
         let mut result: usize = 1;
         let lit_state = ((self.output.len() & ((1 << self.lp) - 1)) << self.lc) +
@@ -267,7 +248,7 @@ where
         let probs = &mut self.literal_probs[lit_state];
 
         if self.state >= 7 {
-            let mut match_byte = self.output[self.output.len() - self.rep[0] - 1] as usize;
+            let mut match_byte = self.output.last_n(self.rep[0] + 1)? as usize;
 
             while result < 0x100 {
                 let match_bit = (match_byte >> 7) & 1;
