@@ -36,7 +36,7 @@ where
         if self.len == 0 {
             lit
         } else {
-            self.buf[(self.cursor + self.dict_size - 1) % self.dict_size]
+            self.buf[(self.dict_size + self.cursor - 1) % self.dict_size]
         }
     }
 
@@ -57,7 +57,7 @@ where
             )));
         }
 
-        let offset = (self.cursor + self.dict_size - dist) % self.dict_size;
+        let offset = (self.dict_size + self.cursor - dist) % self.dict_size;
         Ok(self.buf[offset])
     }
 
@@ -94,7 +94,7 @@ where
             )));
         }
 
-        let mut offset = (self.cursor + self.dict_size - dist) % self.dict_size;
+        let mut offset = (self.dict_size + self.cursor - dist) % self.dict_size;
         for _ in 0..len {
             let x = self.buf[offset];
             self.append_literal(x)?;
