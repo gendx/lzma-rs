@@ -1,5 +1,5 @@
 use std::io;
-use util;
+use byteorder::WriteBytesExt;
 
 pub struct RangeEncoder<'a, W>
 where
@@ -33,7 +33,7 @@ where
             let mut tmp = self.cache;
             loop {
                 let byte = tmp.wrapping_add((self.low >> 32) as u8);
-                util::write_u8(self.stream, byte)?;
+                self.stream.write_u8(byte)?;
                 debug!("> byte: {:02x}", byte);
                 tmp = 0xFF;
                 self.cachesz -= 1;

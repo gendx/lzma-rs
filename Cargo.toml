@@ -5,6 +5,7 @@ authors = ["Guillaume Endignoux <ggendx@gmail.com>"]
 exclude = ["tests/"]
 
 [dependencies]
+byteorder = "1"
 log = "0.3"
 
 [dev-dependencies]

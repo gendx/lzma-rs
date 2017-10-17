@@ -2,7 +2,7 @@ use std::io;
 use error;
 use decode::lzbuffer;
 use decode::rangecoder;
-use util;
+use byteorder::{LittleEndian, ReadBytesExt};
 
 pub struct Decoder<'a, R, W>
 where
@@ -41,7 +41,7 @@ where
     // Read LZMA header and initialize decoder
     pub fn from_stream(stream: &'a mut R, output: &'a mut W) -> error::Result<Self> {
         // Properties
-        let props = try!(util::read_u8(stream).or_else(|e| {
+        let props = try!(stream.read_u8().or_else(|e| {
             Err(error::Error::LZMAError(
                 format!("LZMA header too short: {}", e),
             ))
@@ -63,7 +63,7 @@ where
         info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
 
         // Dictionary
-        let dict_size_provided = try!(util::read_u32_le(stream).or_else(|e| {
+        let dict_size_provided = try!(stream.read_u32::<LittleEndian>().or_else(|e| {
             Err(error::Error::LZMAError(
                 format!("LZMA header too short: {}", e),
             ))
@@ -77,7 +77,7 @@ where
         info!("Dict size: {}", dict_size);
 
         // Unpacked size
-        let unpacked_size_provided = try!(util::read_u64_le(stream).or_else(|e| {
+        let unpacked_size_provided = try!(stream.read_u64::<LittleEndian>().or_else(|e| {
             Err(error::Error::LZMAError(
                 format!("LZMA header too short: {}", e),
             ))

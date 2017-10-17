@@ -1,10 +1,10 @@
+extern crate byteorder;
 #[macro_use]
 extern crate log;
 
 mod encode;
 mod decode;
 pub mod error;
-mod util;
 
 use std::io;
 

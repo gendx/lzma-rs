@@ -1,6 +1,6 @@
 use std::io;
 use error;
-use util;
+use byteorder::{BigEndian, ReadBytesExt};
 
 pub struct RangeDecoder<'a, R>
 where
@@ -21,8 +21,8 @@ where
             range: 0xFFFF_FFFF,
             code: 0,
         };
-        let _ = util::read_u8(dec.stream)?;
-        dec.code = util::read_u32_be(dec.stream)?;
+        let _ = dec.stream.read_u8()?;
+        dec.code = dec.stream.read_u32::<BigEndian>()?;
         debug!("0 {{ range: {:08x}, code: {:08x} }}", dec.range, dec.code);
         Ok(dec)
     }
@@ -41,7 +41,7 @@ where
         );
         if self.range < 0x1000000 {
             self.range <<= 8;
-            self.code = (self.code << 8) ^ (util::read_u8(self.stream)? as u32);
+            self.code = (self.code << 8) ^ (self.stream.read_u8()? as u32);
 
             debug!(
                 "+ {{ range: {:08x}, code: {:08x} }}",

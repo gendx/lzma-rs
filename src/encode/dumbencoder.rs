@@ -1,6 +1,6 @@
 use std::io;
 use encode::rangecoder;
-use util;
+use byteorder::{LittleEndian, WriteBytesExt};
 
 pub struct Encoder<'a, W>
 where
@@ -25,15 +25,15 @@ where
         // Properties
         let props = (LC + 9 * (LP + 5 * PB)) as u8;
         info!("Properties {{ lc: {}, lp: {}, pb: {} }}", LC, LP, PB);
-        util::write_u8(stream, props)?;
+        stream.write_u8(props)?;
 
         // Dictionary
         info!("Dict size: {}", dict_size);
-        util::write_u32_le(stream, dict_size)?;
+        stream.write_u32::<LittleEndian>(dict_size)?;
 
         // Unpacked size
         info!("Unpacked size: unknown");
-        util::write_u64_le(stream, 0xFFFF_FFFF_FFFF_FFFF)?;
+        stream.write_u64::<LittleEndian>(0xFFFF_FFFF_FFFF_FFFF)?;
 
         let encoder = Encoder {
             rangecoder: rangecoder::RangeEncoder::new(stream),
