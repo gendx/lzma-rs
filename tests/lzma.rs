@@ -81,36 +81,14 @@ fn round_trip_files() {
 fn big_file() {
     let _ = env_logger::init();
     decomp_big_file("tests/files/foo.txt.lzma", "tests/files/foo.txt");
+    decomp_big_file("tests/files/hugedict.txt.lzma", "tests/files/foo.txt");
 }
 
 #[test]
 fn decompress_empty_world() {
     let _ = env_logger::init();
-    let mut x: &[u8] = &[
-        0x5d,
-        0x00,
-        0x00,
-        0x80,
-        0x00,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0x00,
-        0x83,
-        0xff,
-        0xfb,
-        0xff,
-        0xff,
-        0xc0,
-        0x00,
-        0x00,
-        0x00,
-    ];
+    let mut x: &[u8] = b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x83\xff\
+                         \xfb\xff\xff\xc0\x00\x00\x00";
     let mut decomp: Vec<u8> = Vec::new();
     lzma::decompress(&mut x, &mut decomp).unwrap();
     assert_eq!(decomp, b"")
@@ -119,43 +97,21 @@ fn decompress_empty_world() {
 #[test]
 fn decompress_hello_world() {
     let _ = env_logger::init();
-    let mut x: &[u8] = &[
-        0x5d,
-        0x00,
-        0x00,
-        0x80,
-        0x00,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0x00,
-        0x24,
-        0x19,
-        0x49,
-        0x98,
-        0x6f,
-        0x10,
-        0x19,
-        0xc6,
-        0xd7,
-        0x31,
-        0xeb,
-        0x36,
-        0x50,
-        0xb2,
-        0x98,
-        0x48,
-        0xff,
-        0xfe,
-        0xa5,
-        0xb0,
-        0x00,
-    ];
+    let mut x: &[u8] = b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
+                         \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
+                         \xa5\xb0\x00";
+    let mut decomp: Vec<u8> = Vec::new();
+    lzma::decompress(&mut x, &mut decomp).unwrap();
+    assert_eq!(decomp, b"Hello world\x0a")
+}
+
+#[test]
+fn decompress_huge_dict() {
+    // Hello world with a dictionary of size 0x7F7F7F7F
+    let _ = env_logger::init();
+    let mut x: &[u8] = b"\x5d\x7f\x7f\x7f\x7f\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
+                         \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
+                         \xa5\xb0\x00";
     let mut decomp: Vec<u8> = Vec::new();
     lzma::decompress(&mut x, &mut decomp).unwrap();
     assert_eq!(decomp, b"Hello world\x0a")

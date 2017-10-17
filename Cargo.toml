@@ -1,7 +1,12 @@
 [package]
 name = "lzma"
+description = "An LZMA decoder/encoder written in pure Rust"
 version = "0.1.0"
+license = "MIT"
 authors = ["Guillaume Endignoux <ggendx@gmail.com>"]
+repository = "https://github.com/gendx/lzma-rs"
+readme = "README.md"
+categories = ["compression"]
 exclude = ["tests/"]
 
 [dependencies]

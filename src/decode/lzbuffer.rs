@@ -18,6 +18,7 @@ where
     W: io::Write,
 {
     pub fn from_stream(stream: &'a mut W, dict_size: usize) -> Self {
+        info!("Dict size in LZ buffer: {}", dict_size);
         Self {
             stream: stream,
             buf: vec![0; dict_size],
