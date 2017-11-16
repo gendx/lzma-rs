@@ -1,3 +1,5 @@
 pub mod decoder;
+pub mod lzma2;
 mod lzbuffer;
-mod rangecoder;
+pub mod rangecoder;
+mod subbufread;
