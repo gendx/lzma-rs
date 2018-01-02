@@ -3,4 +3,4 @@ pub mod lzma2;
 pub mod xz;
 pub mod lzbuffer;
 pub mod rangecoder;
-mod util;
+pub mod util;

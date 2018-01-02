@@ -6,8 +6,8 @@ use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use crc::{crc32, crc64, Hasher32};
 use std::hash::Hasher;
 
-static XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00];
-static XZ_MAGIC_FOOTER: &[u8] = &[0x59, 0x5A];
+const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00];
+const XZ_MAGIC_FOOTER: &[u8] = &[0x59, 0x5A];
 
 #[derive(Debug)]
 enum CheckMethod {

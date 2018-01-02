@@ -54,3 +54,7 @@ pub fn xz_decompress<R: io::BufRead, W: io::Write>(
 ) -> error::Result<()> {
     decode::xz::decode_stream(input, output)
 }
+
+pub fn xz_compress<R: io::BufRead, W: io::Write>(input: &mut R, output: &mut W) -> io::Result<()> {
+    encode::xz::encode_stream(input, output)
+}
