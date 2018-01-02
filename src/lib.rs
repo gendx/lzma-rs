@@ -41,6 +41,13 @@ pub fn lzma2_decompress<R: io::BufRead, W: io::Write>(
     decode::lzma2::decode_stream(input, output)
 }
 
+pub fn lzma2_compress<R: io::BufRead, W: io::Write>(
+    input: &mut R,
+    output: &mut W,
+) -> io::Result<()> {
+    encode::lzma2::encode_stream(input, output)
+}
+
 pub fn xz_decompress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
