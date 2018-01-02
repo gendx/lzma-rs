@@ -1,6 +1,7 @@
 use std::io;
-use error;
 use byteorder::{BigEndian, ReadBytesExt};
+use decode::util;
+use error;
 
 pub struct RangeDecoder<'a, R>
 where
@@ -29,7 +30,7 @@ where
 
     #[inline]
     pub fn is_finished_ok(&mut self) -> io::Result<bool> {
-        Ok(self.code == 0 && (self.stream.fill_buf()?.len() == 0))
+        Ok(self.code == 0 && util::is_eof(self.stream)?)
     }
 
     #[inline]

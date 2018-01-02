@@ -1,38 +1,40 @@
 use std::io;
 use error;
-use decode::decoder;
+use decode::lzma;
 use decode::lzbuffer;
 use decode::lzbuffer::LZBuffer;
 use byteorder::{BigEndian, ReadBytesExt};
-use decode::subbufread;
+use decode::util;
 use decode::rangecoder;
 
-pub fn decode_stream<R, W>(stream: &mut R, output: &mut W) -> error::Result<()>
+pub fn decode_stream<R, W>(input: &mut R, output: &mut W) -> error::Result<()>
 where
     R: io::BufRead,
     W: io::Write,
 {
     let accum = lzbuffer::LZAccumBuffer::from_stream(output);
-    let mut decoder = decoder::new_accum(accum, 0, 0, 0, None);
+    let mut decoder = lzma::new_accum(accum, 0, 0, 0, None);
 
     loop {
-        let status = try!(stream.read_u8().or_else(|e| {
+        let status = try!(input.read_u8().or_else(|e| {
             Err(error::Error::LZMAError(
                 format!("LZMA2 expected new status: {}", e),
             ))
         }));
 
+        info!("LZMA2 status: {}", status);
+
         if status == 0 {
-            info!("LZMA2 end of stream");
+            info!("LZMA2 end of input");
             break;
         } else if status == 1 {
             // uncompressed reset dict
-            parse_uncompressed(&mut decoder, stream, true)?;
+            parse_uncompressed(&mut decoder, input, true)?;
         } else if status == 2 {
             // uncompressed no reset
-            parse_uncompressed(&mut decoder, stream, false)?;
+            parse_uncompressed(&mut decoder, input, false)?;
         } else {
-            parse_lzma(&mut decoder, stream, status)?;
+            parse_lzma(&mut decoder, input, status)?;
         }
     }
 
@@ -41,8 +43,8 @@ where
 }
 
 fn parse_lzma<'a, R, W>(
-    decoder: &mut decoder::DecoderState<lzbuffer::LZAccumBuffer<'a, W>>,
-    stream: &mut R,
+    decoder: &mut lzma::DecoderState<lzbuffer::LZAccumBuffer<'a, W>>,
+    input: &mut R,
     status: u8,
 ) -> error::Result<()>
 where
@@ -51,7 +53,7 @@ where
 {
     if status & 0x80 == 0 {
         return Err(error::Error::LZMAError(format!(
-            "LZMA2 invalid status: {} must be 0, 1, 2 or >= 128",
+            "LZMA2 invalid status {}, must be 0, 1, 2 or >= 128",
             status
         )));
     }
@@ -83,14 +85,14 @@ where
         _ => unreachable!(),
     }
 
-    let unpacked_size = try!(stream.read_u16::<BigEndian>().or_else(|e| {
+    let unpacked_size = try!(input.read_u16::<BigEndian>().or_else(|e| {
         Err(error::Error::LZMAError(
             format!("LZMA2 expected unpacked size: {}", e),
         ))
     }));
     let unpacked_size = ((((status & 0x1F) as u64) << 16) | (unpacked_size as u64)) + 1;
 
-    let packed_size = try!(stream.read_u16::<BigEndian>().or_else(|e| {
+    let packed_size = try!(input.read_u16::<BigEndian>().or_else(|e| {
         Err(error::Error::LZMAError(
             format!("LZMA2 expected packed size: {}", e),
         ))
@@ -116,7 +118,7 @@ where
         let mut pb: u32;
 
         if reset_props {
-            let props = try!(stream.read_u8().or_else(|e| {
+            let props = try!(input.read_u8().or_else(|e| {
                 Err(error::Error::LZMAError(
                     format!("LZMA2 expected new properties: {}", e),
                 ))
@@ -154,11 +156,11 @@ where
 
     decoder.set_unpacked_size(Some(unpacked_size));
 
-    let mut subbufread = subbufread::SubBufRead::new(stream, packed_size);
+    let mut subbufread = util::SubBufRead::new(input, packed_size);
     let mut rangecoder = try!(rangecoder::RangeDecoder::new(&mut subbufread).or_else(
         |e| {
             Err(error::Error::LZMAError(
-                format!("LZMA stream too short: {}", e),
+                format!("LZMA input too short: {}", e),
             ))
         },
     ));
@@ -166,15 +168,15 @@ where
 }
 
 fn parse_uncompressed<'a, R, W>(
-    decoder: &mut decoder::DecoderState<lzbuffer::LZAccumBuffer<'a, W>>,
-    stream: &mut R,
+    decoder: &mut lzma::DecoderState<lzbuffer::LZAccumBuffer<'a, W>>,
+    input: &mut R,
     reset_dict: bool,
 ) -> error::Result<()>
 where
     R: io::BufRead,
     W: io::Write,
 {
-    let unpacked_size = try!(stream.read_u16::<BigEndian>().or_else(|e| {
+    let unpacked_size = try!(input.read_u16::<BigEndian>().or_else(|e| {
         Err(error::Error::LZMAError(
             format!("LZMA2 expected unpacked size: {}", e),
         ))
@@ -192,7 +194,7 @@ where
     }
 
     let mut buf = vec![0; unpacked_size];
-    try!(stream.read_exact(buf.as_mut_slice()).or_else(|e| {
+    try!(input.read_exact(buf.as_mut_slice()).or_else(|e| {
         Err(error::Error::LZMAError(format!(
             "LZMA2 expected {} uncompressed bytes: {}",
             unpacked_size,

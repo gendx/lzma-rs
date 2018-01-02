@@ -12,7 +12,7 @@ pub trait LZBuffer {
     // Fetch an LZ sequence (length, distance) from inside the buffer
     fn append_lz(&mut self, len: usize, dist: usize) -> error::Result<()>;
     // Flush the buffer to the output
-    fn finish(&mut self) -> io::Result<()>;
+    fn finish(self) -> io::Result<()>;
 }
 
 
@@ -115,7 +115,7 @@ where
     }
 
     // Flush the buffer to the output
-    fn finish(&mut self) -> io::Result<()> {
+    fn finish(self) -> io::Result<()> {
         self.stream.write_all(self.buf.as_slice())?;
         self.stream.flush()?;
         Ok(())
@@ -235,7 +235,7 @@ where
     }
 
     // Flush the buffer to the output
-    fn finish(&mut self) -> io::Result<()> {
+    fn finish(self) -> io::Result<()> {
         if self.cursor > 0 {
             self.stream.write_all(&self.buf[0..self.cursor])?;
             self.stream.flush()?;

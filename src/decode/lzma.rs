@@ -15,12 +15,12 @@ pub struct LZMAParams {
 }
 
 impl LZMAParams {
-    pub fn read_header<R>(stream: &mut R) -> error::Result<LZMAParams>
+    pub fn read_header<R>(input: &mut R) -> error::Result<LZMAParams>
     where
         R: io::BufRead,
     {
         // Properties
-        let props = try!(stream.read_u8().or_else(|e| {
+        let props = try!(input.read_u8().or_else(|e| {
             Err(error::Error::LZMAError(
                 format!("LZMA header too short: {}", e),
             ))
@@ -42,7 +42,7 @@ impl LZMAParams {
         info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
 
         // Dictionary
-        let dict_size_provided = try!(stream.read_u32::<LittleEndian>().or_else(|e| {
+        let dict_size_provided = try!(input.read_u32::<LittleEndian>().or_else(|e| {
             Err(error::Error::LZMAError(
                 format!("LZMA header too short: {}", e),
             ))
@@ -56,7 +56,7 @@ impl LZMAParams {
         info!("Dict size: {}", dict_size);
 
         // Unpacked size
-        let unpacked_size_provided = try!(stream.read_u64::<LittleEndian>().or_else(|e| {
+        let unpacked_size_provided = try!(input.read_u64::<LittleEndian>().or_else(|e| {
             Err(error::Error::LZMAError(
                 format!("LZMA header too short: {}", e),
             ))
@@ -320,7 +320,6 @@ where
             }
         }
 
-        self.output.finish()?;
         Ok(())
     }
 

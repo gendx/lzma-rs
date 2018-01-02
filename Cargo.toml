@@ -7,11 +7,13 @@ authors = ["Guillaume Endignoux <ggendx@gmail.com>"]
 repository = "https://github.com/gendx/lzma-rs"
 readme = "README.md"
 categories = ["compression"]
+keywords = ["lzma", "compression", "decompression"]
 exclude = ["tests/"]
 
 [dependencies]
 byteorder = "1"
 log = "0.3"
+crc = "^1.0.0"
 
 [dev-dependencies]
 env_logger = "0.3"

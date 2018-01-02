@@ -5,6 +5,7 @@ use std::result;
 pub enum Error {
     IOError(io::Error),
     LZMAError(String),
+    XZError(String),
 }
 
 pub type Result<T> = result::Result<T, Error>;
