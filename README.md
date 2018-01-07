@@ -8,9 +8,10 @@ It already supports LZMA, LZMA2 and a subset of the `.xz` file format.
 Decompress a `.xz` file.
 
 ```rust
-let filename = "foo.txt";
+let filename = "foo.xz";
 let mut f = std::io::BufReader::new(std::fs::File::open(filename).unwrap());
-let mut decomp: Vec<u8> = Vec::new(); // Or anything that implements "std::io::Write"
+// "decomp" can be anything that implements "std::io::Write"
+let mut decomp: Vec<u8> = Vec::new();
 lzma::xz_decompress(&mut f, &mut decomp).unwrap();
 // Decompressed content is now in "decomp"
 ```
