@@ -18,5 +18,13 @@ git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
 members = ["."]
 
 [[bin]]
-name = "roundtrip"
-path = "fuzz_targets/roundtrip.rs"
+name = "roundtrip_lzma"
+path = "fuzz_targets/roundtrip_lzma.rs"
+
+[[bin]]
+name = "roundtrip_lzma2"
+path = "fuzz_targets/roundtrip_lzma2.rs"
+
+[[bin]]
+name = "roundtrip_xz"
+path = "fuzz_targets/roundtrip_xz.rs"
