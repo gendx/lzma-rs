@@ -8,7 +8,7 @@ repository = "https://github.com/gendx/lzma-rs"
 readme = "README.md"
 categories = ["compression"]
 keywords = ["lzma", "compression", "decompression"]
-exclude = ["tests/"]
+exclude = ["tests/*"]
 
 [dependencies]
 byteorder = "^1.0.0"
