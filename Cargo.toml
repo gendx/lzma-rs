@@ -1,6 +1,6 @@
 [package]
 name = "lzma"
-description = "An LZMA decoder/encoder written in pure Rust"
+description = "A codec for LZMA, LZMA2 and XZ written in pure Rust"
 version = "0.1.0"
 license = "MIT"
 authors = ["Guillaume Endignoux <ggendx@gmail.com>"]
