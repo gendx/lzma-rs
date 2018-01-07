@@ -11,12 +11,12 @@ keywords = ["lzma", "compression", "decompression"]
 exclude = ["tests/"]
 
 [dependencies]
-byteorder = "1"
-log = "0.3"
+byteorder = "^1.0.0"
 crc = "^1.0.0"
+log = "^0.4"
 
 [dev-dependencies]
-env_logger = "0.3"
+env_logger = "^0.4"
 
 [badges]
 travis-ci = { repository = "gendx/lzma-rs", branch = "master" }
