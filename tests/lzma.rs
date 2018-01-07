@@ -1,4 +1,4 @@
-extern crate lzma;
+extern crate lzma_rs;
 extern crate env_logger;
 
 #[macro_use]
@@ -6,12 +6,12 @@ extern crate log;
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
-    lzma::lzma_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
+    lzma_rs::lzma_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
     info!("Compressed {} -> {} bytes", x.len(), compressed.len());
     debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
-    lzma::lzma_decompress(&mut bf, &mut decomp).unwrap();
+    lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
     assert_eq!(decomp, x)
 }
 
@@ -36,7 +36,7 @@ fn decomp_big_file(compfile: &str, plainfile: &str) {
         .unwrap();
     let mut f = std::io::BufReader::new(std::fs::File::open(compfile).unwrap());
     let mut decomp: Vec<u8> = Vec::new();
-    lzma::lzma_decompress(&mut f, &mut decomp).unwrap();
+    lzma_rs::lzma_decompress(&mut f, &mut decomp).unwrap();
     assert!(decomp == expected)
 }
 
@@ -48,7 +48,7 @@ fn decompress_short_header() {
     assert_eq!(
         format!(
             "{:?}",
-            lzma::lzma_decompress(&mut "".as_bytes(), &mut decomp).unwrap_err()
+            lzma_rs::lzma_decompress(&mut "".as_bytes(), &mut decomp).unwrap_err()
         ),
         String::from(
             "LZMAError(\"LZMA header too short: failed to fill whole buffer\")",
@@ -90,7 +90,7 @@ fn decompress_empty_world() {
     let mut x: &[u8] = b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x83\xff\
                          \xfb\xff\xff\xc0\x00\x00\x00";
     let mut decomp: Vec<u8> = Vec::new();
-    lzma::lzma_decompress(&mut x, &mut decomp).unwrap();
+    lzma_rs::lzma_decompress(&mut x, &mut decomp).unwrap();
     assert_eq!(decomp, b"")
 }
 
@@ -101,7 +101,7 @@ fn decompress_hello_world() {
                          \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
                          \xa5\xb0\x00";
     let mut decomp: Vec<u8> = Vec::new();
-    lzma::lzma_decompress(&mut x, &mut decomp).unwrap();
+    lzma_rs::lzma_decompress(&mut x, &mut decomp).unwrap();
     assert_eq!(decomp, b"Hello world\x0a")
 }
 
@@ -113,6 +113,6 @@ fn decompress_huge_dict() {
                          \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
                          \xa5\xb0\x00";
     let mut decomp: Vec<u8> = Vec::new();
-    lzma::lzma_decompress(&mut x, &mut decomp).unwrap();
+    lzma_rs::lzma_decompress(&mut x, &mut decomp).unwrap();
     assert_eq!(decomp, b"Hello world\x0a")
 }

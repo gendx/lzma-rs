@@ -1,5 +1,5 @@
 [package]
-name = "lzma"
+name = "lzma-rs"
 description = "A codec for LZMA, LZMA2 and XZ written in pure Rust"
 version = "0.1.0"
 license = "MIT"

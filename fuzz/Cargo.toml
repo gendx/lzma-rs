@@ -8,7 +8,7 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
-[dependencies.lzma]
+[dependencies.lzma-rs]
 path = ".."
 [dependencies.libfuzzer-sys]
 git = "https://github.com/rust-fuzz/libfuzzer-sys.git"

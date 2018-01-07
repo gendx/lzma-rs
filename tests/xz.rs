@@ -1,4 +1,4 @@
-extern crate lzma;
+extern crate lzma_rs;
 extern crate env_logger;
 
 #[macro_use]
@@ -6,12 +6,12 @@ extern crate log;
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
-    lzma::xz_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
+    lzma_rs::xz_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
     info!("Compressed {} -> {} bytes", x.len(), compressed.len());
     debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
-    lzma::xz_decompress(&mut bf, &mut decomp).unwrap();
+    lzma_rs::xz_decompress(&mut bf, &mut decomp).unwrap();
     assert_eq!(decomp, x)
 }
 
@@ -57,7 +57,7 @@ fn decomp_big_file(compfile: &str, plainfile: &str) {
         .unwrap();
     let mut f = std::io::BufReader::new(std::fs::File::open(compfile).unwrap());
     let mut decomp: Vec<u8> = Vec::new();
-    lzma::xz_decompress(&mut f, &mut decomp).unwrap();
+    lzma_rs::xz_decompress(&mut f, &mut decomp).unwrap();
     assert!(decomp == expected)
 }
 
@@ -74,7 +74,7 @@ fn decompress_empty_world() {
                          \x1c\xdf\x44\x21\x1f\xb6\xf3\x7d\x01\x00\x00\x00\x00\x04\x59\x5a\
                          ";
     let mut decomp: Vec<u8> = Vec::new();
-    lzma::xz_decompress(&mut x, &mut decomp).unwrap();
+    lzma_rs::xz_decompress(&mut x, &mut decomp).unwrap();
     assert_eq!(decomp, b"")
 }
 
@@ -87,6 +87,6 @@ fn decompress_hello_world() {
                          \x00\x01\x24\x0c\xa6\x18\xd8\xd8\x1f\xb6\xf3\x7d\x01\x00\x00\x00\
                          \x00\x04\x59\x5a";
     let mut decomp: Vec<u8> = Vec::new();
-    lzma::xz_decompress(&mut x, &mut decomp).unwrap();
+    lzma_rs::xz_decompress(&mut x, &mut decomp).unwrap();
     assert_eq!(decomp, b"Hello world\x0a")
 }
