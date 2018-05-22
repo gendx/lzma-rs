@@ -1,8 +1,8 @@
-use std::io;
-use error;
+use byteorder::{LittleEndian, ReadBytesExt};
 use decode::lzbuffer;
 use decode::rangecoder;
-use byteorder::{LittleEndian, ReadBytesExt};
+use error;
+use std::io;
 
 pub struct LZMAParams {
     // most lc significant bits of previous byte are part of the literal context
@@ -20,11 +20,14 @@ impl LZMAParams {
         R: io::BufRead,
     {
         // Properties
-        let props = try!(input.read_u8().or_else(|e| {
-            Err(error::Error::LZMAError(
-                format!("LZMA header too short: {}", e),
-            ))
-        }));
+        let props = try!(
+            input.read_u8().or_else(|e| {
+                Err(error::Error::LZMAError(format!(
+                    "LZMA header too short: {}",
+                    e
+                )))
+            })
+        );
 
         let mut pb = props as u32;
         if pb >= 225 {
@@ -42,11 +45,9 @@ impl LZMAParams {
         info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
 
         // Dictionary
-        let dict_size_provided = try!(input.read_u32::<LittleEndian>().or_else(|e| {
-            Err(error::Error::LZMAError(
-                format!("LZMA header too short: {}", e),
-            ))
-        }));
+        let dict_size_provided = try!(input.read_u32::<LittleEndian>().or_else(|e| Err(
+            error::Error::LZMAError(format!("LZMA header too short: {}", e),)
+        )));
         let dict_size = if dict_size_provided < 0x1000 {
             0x1000
         } else {
@@ -56,11 +57,9 @@ impl LZMAParams {
         info!("Dict size: {}", dict_size);
 
         // Unpacked size
-        let unpacked_size_provided = try!(input.read_u64::<LittleEndian>().or_else(|e| {
-            Err(error::Error::LZMAError(
-                format!("LZMA header too short: {}", e),
-            ))
-        }));
+        let unpacked_size_provided = try!(input.read_u64::<LittleEndian>().or_else(|e| Err(
+            error::Error::LZMAError(format!("LZMA header too short: {}", e),)
+        )));
         let marker_mandatory: bool = unpacked_size_provided == 0xFFFF_FFFF_FFFF_FFFF;
         let unpacked_size = if marker_mandatory {
             None
@@ -81,7 +80,6 @@ impl LZMAParams {
         Ok(params)
     }
 }
-
 
 pub struct DecoderState<LZB>
 where
@@ -223,8 +221,7 @@ where
             if !rangecoder.decode_bit(
                 // TODO: assumes pb = 2 ??
                 &mut self.is_match[(self.state << 4) + pos_state],
-            )?
-            {
+            )? {
                 let byte: u8 = self.decode_literal(rangecoder)?;
                 debug!("Literal: {}", byte);
                 self.output.append_literal(byte)?;
@@ -248,10 +245,8 @@ where
                 // dist = rep[0]
                 if !rangecoder.decode_bit(&mut self.is_rep_g0[self.state])? {
                     // len = 1
-                    if !rangecoder.decode_bit(
-                        &mut self.is_rep_0long[(self.state << 4) +
-                                                   pos_state],
-                    )?
+                    if !rangecoder
+                        .decode_bit(&mut self.is_rep_0long[(self.state << 4) + pos_state])?
                     {
                         // update state (short rep)
                         self.state = if self.state < 7 { 9 } else { 11 };
@@ -331,8 +326,8 @@ where
         let prev_byte = self.output.last_or(def_prev_byte) as usize;
 
         let mut result: usize = 1;
-        let lit_state = ((self.output.len() & ((1 << self.lp) - 1)) << self.lc) +
-            (prev_byte >> (8 - self.lc));
+        let lit_state =
+            ((self.output.len() & ((1 << self.lp) - 1)) << self.lc) + (prev_byte >> (8 - self.lc));
         let probs = &mut self.literal_probs[lit_state];
 
         if self.state >= 7 {
@@ -341,9 +336,8 @@ where
             while result < 0x100 {
                 let match_bit = (match_byte >> 7) & 1;
                 match_byte <<= 1;
-                let bit = rangecoder.decode_bit(
-                    &mut probs[((1 + match_bit) << 8) + result],
-                )? as usize;
+                let bit =
+                    rangecoder.decode_bit(&mut probs[((1 + match_bit) << 8) + result])? as usize;
                 result = (result << 1) ^ bit;
                 if match_bit != bit {
                     break;

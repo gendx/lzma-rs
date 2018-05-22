@@ -1,5 +1,5 @@
-use std::io;
 use byteorder::WriteBytesExt;
+use std::io;
 
 pub struct RangeEncoder<'a, W>
 where
@@ -62,19 +62,13 @@ where
         while self.range < 0x1000000 {
             debug!(
                 "+ {{ range: {:08x}, low: {:010x}, cache: {:02x}, {} }}",
-                self.range,
-                self.low,
-                self.cache,
-                self.cachesz
+                self.range, self.low, self.cache, self.cachesz
             );
             self.range <<= 8;
             self.write_low()?;
             debug!(
                 "* {{ range: {:08x}, low: {:010x}, cache: {:02x}, {} }}",
-                self.range,
-                self.low,
-                self.cache,
-                self.cachesz
+                self.range, self.low, self.cache, self.cachesz
             );
         }
         trace!("  {{ range: {:08x}, low: {:010x} }}", self.range, self.low);

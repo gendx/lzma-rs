@@ -1,5 +1,5 @@
-use std::io;
 use std::hash;
+use std::io;
 
 pub fn read_tag<R: io::BufRead>(input: &mut R, tag: &[u8]) -> io::Result<bool> {
     let mut buf = vec![0; tag.len()];
@@ -39,14 +39,13 @@ pub fn flush_zero_padding<R: io::BufRead>(input: &mut R) -> io::Result<bool> {
     }
 }
 
-
 // A Read computing a digest on the bytes read.
 pub struct HasherRead<'a, R, H>
 where
     R: 'a + io::Read,
     H: 'a + hash::Hasher,
 {
-    read: &'a mut R, // underlying reader
+    read: &'a mut R,   // underlying reader
     hasher: &'a mut H, // hasher
 }
 
@@ -72,14 +71,13 @@ where
     }
 }
 
-
 // A BufRead counting the bytes read.
 pub struct CountBufRead<'a, R>
 where
     R: 'a + io::BufRead,
 {
     read: &'a mut R, // underlying reader
-    count: usize, // number of bytes read
+    count: usize,    // number of bytes read
 }
 
 impl<'a, R> CountBufRead<'a, R>
@@ -123,14 +121,13 @@ where
     }
 }
 
-
 // A subset of a BufRead, limited to the first len bytes.
 pub struct SubBufRead<'a, R>
 where
     R: 'a + io::BufRead,
 {
     read: &'a mut R, // underlying reader
-    len: usize, // number of bytes left to read
+    len: usize,      // number of bytes left to read
 }
 
 impl<'a, R> SubBufRead<'a, R>
@@ -176,7 +173,11 @@ where
     }
 
     fn consume(&mut self, amt: usize) {
-        let len = if amt <= self.len { amt } else { self.len };
+        let len = if amt <= self.len {
+            amt
+        } else {
+            self.len
+        };
         self.read.consume(len);
         self.len -= len;
     }

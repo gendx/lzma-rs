@@ -1,5 +1,5 @@
-extern crate lzma_rs;
 extern crate env_logger;
+extern crate lzma_rs;
 
 #[macro_use]
 extern crate log;

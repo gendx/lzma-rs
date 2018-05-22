@@ -1,6 +1,6 @@
-use std::io;
-use encode::rangecoder;
 use byteorder::{LittleEndian, WriteBytesExt};
+use encode::rangecoder;
+use std::io;
 
 pub struct Encoder<'a, W>
 where
@@ -57,10 +57,8 @@ where
             input_len = out_len;
 
             // Literal
-            self.rangecoder.encode_bit(
-                &mut self.is_match[pos_state],
-                false,
-            )?;
+            self.rangecoder
+                .encode_bit(&mut self.is_match[pos_state], false)?;
 
             self.encode_literal(byte, prev_byte)?;
             prev_byte = byte;
@@ -74,10 +72,8 @@ where
         let pos_state = input_len & 3;
 
         // Match
-        self.rangecoder.encode_bit(
-            &mut self.is_match[pos_state],
-            true,
-        )?;
+        self.rangecoder
+            .encode_bit(&mut self.is_match[pos_state], true)?;
         // New distance
         self.rangecoder.encode_bit(&mut 0x400, false)?;
 

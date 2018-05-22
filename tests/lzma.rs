@@ -1,5 +1,5 @@
-extern crate lzma_rs;
 extern crate env_logger;
+extern crate lzma_rs;
 
 #[macro_use]
 extern crate log;
@@ -50,9 +50,7 @@ fn decompress_short_header() {
             "{:?}",
             lzma_rs::lzma_decompress(&mut "".as_bytes(), &mut decomp).unwrap_err()
         ),
-        String::from(
-            "LZMAError(\"LZMA header too short: failed to fill whole buffer\")",
-        )
+        String::from("LZMAError(\"LZMA header too short: failed to fill whole buffer\")")
     )
 }
 

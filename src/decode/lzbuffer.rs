@@ -1,5 +1,5 @@
-use std::io;
 use error;
+use std::io;
 
 pub trait LZBuffer {
     fn len(&self) -> usize;
@@ -15,15 +15,14 @@ pub trait LZBuffer {
     fn finish(self) -> io::Result<()>;
 }
 
-
 // An accumulating buffer for LZ sequences
 pub struct LZAccumBuffer<'a, W>
 where
     W: 'a + io::Write,
 {
     stream: &'a mut W, // Output sink
-    buf: Vec<u8>, // Buffer
-    len: usize, // Total number of bytes sent through the buffer
+    buf: Vec<u8>,      // Buffer
+    len: usize,        // Total number of bytes sent through the buffer
 }
 
 impl<'a, W> LZAccumBuffer<'a, W>
@@ -77,8 +76,7 @@ where
         if dist > buf_len {
             return Err(error::Error::LZMAError(format!(
                 "Match distance {} is beyond output size {}",
-                dist,
-                buf_len
+                dist, buf_len
             )));
         }
 
@@ -99,8 +97,7 @@ where
         if dist > buf_len {
             return Err(error::Error::LZMAError(format!(
                 "LZ distance {} is beyond output size {}",
-                dist,
-                buf_len
+                dist, buf_len
             )));
         }
 
@@ -122,17 +119,16 @@ where
     }
 }
 
-
 // A circular buffer for LZ sequences
 pub struct LZCircularBuffer<'a, W>
 where
     W: 'a + io::Write,
 {
     stream: &'a mut W, // Output sink
-    buf: Vec<u8>, // Circular buffer
-    dict_size: usize, // Length of the buffer
-    cursor: usize, // Current position
-    len: usize, // Total number of bytes sent through the buffer
+    buf: Vec<u8>,      // Circular buffer
+    dict_size: usize,  // Length of the buffer
+    cursor: usize,     // Current position
+    len: usize,        // Total number of bytes sent through the buffer
 }
 
 impl<'a, W> LZCircularBuffer<'a, W>
@@ -173,15 +169,13 @@ where
         if dist > self.dict_size {
             return Err(error::Error::LZMAError(format!(
                 "Match distance {} is beyond dictionary size {}",
-                dist,
-                self.dict_size
+                dist, self.dict_size
             )));
         }
         if dist > self.len {
             return Err(error::Error::LZMAError(format!(
                 "Match distance {} is beyond output size {}",
-                dist,
-                self.len
+                dist, self.len
             )));
         }
 
@@ -210,15 +204,13 @@ where
         if dist > self.dict_size {
             return Err(error::Error::LZMAError(format!(
                 "LZ distance {} is beyond dictionary size {}",
-                dist,
-                self.dict_size
+                dist, self.dict_size
             )));
         }
         if dist > self.len {
             return Err(error::Error::LZMAError(format!(
                 "LZ distance {} is beyond output size {}",
-                dist,
-                self.len
+                dist, self.len
             )));
         }
 

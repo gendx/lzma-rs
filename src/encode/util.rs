@@ -1,6 +1,5 @@
-use std::io;
 use std::hash;
-
+use std::io;
 
 // A Write computing a digest on the bytes written.
 pub struct HasherWrite<'a, W, H>
@@ -8,7 +7,7 @@ where
     W: 'a + io::Write,
     H: 'a + hash::Hasher,
 {
-    write: &'a mut W, // underlying writer
+    write: &'a mut W,  // underlying writer
     hasher: &'a mut H, // hasher
 }
 
@@ -38,14 +37,13 @@ where
     }
 }
 
-
 // A Write counting the bytes written.
 pub struct CountWrite<'a, W>
 where
     W: 'a + io::Write,
 {
     write: &'a mut W, // underlying writer
-    count: usize, // number of bytes written
+    count: usize,     // number of bytes written
 }
 
 impl<'a, W> CountWrite<'a, W>

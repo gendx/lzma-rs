@@ -1,10 +1,10 @@
-use std::io;
-use std::io::Write;
-use encode::lzma2;
-use encode::util;
-use decode;
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
 use crc::{crc32, Hasher32};
+use decode;
+use encode::lzma2;
+use encode::util;
+use std::io;
+use std::io::Write;
 
 // TODO: move to some common file for encoder & decoder
 const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00];
@@ -102,8 +102,7 @@ where
     };
     info!(
         "Unpadded size = {}, unpacked_size = {}",
-        unpadded_size,
-        unpacked_size
+        unpadded_size, unpacked_size
     );
 
     let padding_size = ((unpadded_size ^ 0x03) + 1) & 0x03;

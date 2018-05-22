@@ -1,7 +1,7 @@
-use std::io;
 use byteorder::{BigEndian, ReadBytesExt};
 use decode::util;
 use error;
+use std::io;
 
 pub struct RangeDecoder<'a, R>
 where
@@ -46,8 +46,7 @@ where
 
             debug!(
                 "+ {{ range: {:08x}, code: {:08x} }}",
-                self.range,
-                self.code
+                self.range, self.code
             );
         }
         Ok(())
@@ -58,9 +57,9 @@ where
         self.range >>= 1;
 
         if self.code == self.range {
-            return Err(error::Error::LZMAError(
-                String::from("Corrupted range coding"),
-            ));
+            return Err(error::Error::LZMAError(String::from(
+                "Corrupted range coding",
+            )));
         }
 
         let bit = self.code > self.range;
@@ -158,7 +157,6 @@ impl BitTree {
         rangecoder.parse_reverse_bit_tree(self.num_bits, self.probs.as_mut_slice(), 0)
     }
 }
-
 
 pub struct LenDecoder {
     choice: u16,

@@ -1,11 +1,11 @@
-use std::io;
-use error;
-use decode::lzma;
+use byteorder::{BigEndian, ReadBytesExt};
 use decode::lzbuffer;
 use decode::lzbuffer::LZBuffer;
-use byteorder::{BigEndian, ReadBytesExt};
-use decode::util;
+use decode::lzma;
 use decode::rangecoder;
+use decode::util;
+use error;
+use std::io;
 
 pub fn decode_stream<R, W>(input: &mut R, output: &mut W) -> error::Result<()>
 where
@@ -16,11 +16,14 @@ where
     let mut decoder = lzma::new_accum(accum, 0, 0, 0, None);
 
     loop {
-        let status = try!(input.read_u8().or_else(|e| {
-            Err(error::Error::LZMAError(
-                format!("LZMA2 expected new status: {}", e),
-            ))
-        }));
+        let status = try!(
+            input.read_u8().or_else(|e| {
+                Err(error::Error::LZMAError(format!(
+                    "LZMA2 expected new status: {}",
+                    e
+                )))
+            })
+        );
 
         info!("LZMA2 status: {}", status);
 
@@ -85,18 +88,14 @@ where
         _ => unreachable!(),
     }
 
-    let unpacked_size = try!(input.read_u16::<BigEndian>().or_else(|e| {
-        Err(error::Error::LZMAError(
-            format!("LZMA2 expected unpacked size: {}", e),
-        ))
-    }));
+    let unpacked_size = try!(input.read_u16::<BigEndian>().or_else(|e| Err(
+        error::Error::LZMAError(format!("LZMA2 expected unpacked size: {}", e),)
+    )));
     let unpacked_size = ((((status & 0x1F) as u64) << 16) | (unpacked_size as u64)) + 1;
 
-    let packed_size = try!(input.read_u16::<BigEndian>().or_else(|e| {
-        Err(error::Error::LZMAError(
-            format!("LZMA2 expected packed size: {}", e),
-        ))
-    }));
+    let packed_size = try!(input.read_u16::<BigEndian>().or_else(|e| Err(
+        error::Error::LZMAError(format!("LZMA2 expected packed size: {}", e))
+    )));
     let packed_size = (packed_size as usize) + 1;
 
     info!(
@@ -118,17 +117,21 @@ where
         let mut pb: u32;
 
         if reset_props {
-            let props = try!(input.read_u8().or_else(|e| {
-                Err(error::Error::LZMAError(
-                    format!("LZMA2 expected new properties: {}", e),
-                ))
-            }));
+            let props = try!(
+                input.read_u8().or_else(|e| {
+                    Err(error::Error::LZMAError(format!(
+                        "LZMA2 expected new properties: {}",
+                        e
+                    )))
+                })
+            );
 
             pb = props as u32;
             if pb >= 225 {
-                return Err(error::Error::LZMAError(
-                    format!("LZMA2 invalid properties: {} must be < 225", pb),
-                ));
+                return Err(error::Error::LZMAError(format!(
+                    "LZMA2 invalid properties: {} must be < 225",
+                    pb
+                )));
             }
 
             lc = pb % 9;
@@ -139,8 +142,7 @@ where
             if lc + lp > 4 {
                 return Err(error::Error::LZMAError(format!(
                     "LZMA2 invalid properties: lc + lp ({} + {}) must be <= 4",
-                    lc,
-                    lp
+                    lc, lp
                 )));
             }
 
@@ -157,13 +159,14 @@ where
     decoder.set_unpacked_size(Some(unpacked_size));
 
     let mut subbufread = util::SubBufRead::new(input, packed_size);
-    let mut rangecoder = try!(rangecoder::RangeDecoder::new(&mut subbufread).or_else(
-        |e| {
-            Err(error::Error::LZMAError(
-                format!("LZMA input too short: {}", e),
-            ))
-        },
-    ));
+    let mut rangecoder = try!(
+        rangecoder::RangeDecoder::new(&mut subbufread).or_else(|e| {
+            Err(error::Error::LZMAError(format!(
+                "LZMA input too short: {}",
+                e
+            )))
+        })
+    );
     decoder.process(&mut rangecoder)
 }
 
@@ -176,17 +179,14 @@ where
     R: io::BufRead,
     W: io::Write,
 {
-    let unpacked_size = try!(input.read_u16::<BigEndian>().or_else(|e| {
-        Err(error::Error::LZMAError(
-            format!("LZMA2 expected unpacked size: {}", e),
-        ))
-    }));
+    let unpacked_size = try!(input.read_u16::<BigEndian>().or_else(|e| Err(
+        error::Error::LZMAError(format!("LZMA2 expected unpacked size: {}", e),)
+    )));
     let unpacked_size = (unpacked_size as usize) + 1;
 
     info!(
         "LZMA2 uncompressed block {{ unpacked_size: {}, reset_dict: {} }}",
-        unpacked_size,
-        reset_dict
+        unpacked_size, reset_dict
     );
 
     if reset_dict {
@@ -194,13 +194,14 @@ where
     }
 
     let mut buf = vec![0; unpacked_size];
-    try!(input.read_exact(buf.as_mut_slice()).or_else(|e| {
-        Err(error::Error::LZMAError(format!(
-            "LZMA2 expected {} uncompressed bytes: {}",
-            unpacked_size,
-            e
-        )))
-    }));
+    try!(
+        input.read_exact(buf.as_mut_slice()).or_else(|e| {
+            Err(error::Error::LZMAError(format!(
+                "LZMA2 expected {} uncompressed bytes: {}",
+                unpacked_size, e
+            )))
+        })
+    );
     decoder.output.append_bytes(buf.as_slice());
 
     Ok(())

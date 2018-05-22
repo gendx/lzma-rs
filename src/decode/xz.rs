@@ -1,10 +1,10 @@
-use std::io;
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use crc::{crc32, crc64, Hasher32};
 use decode::lzma2;
 use decode::util;
 use error;
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use crc::{crc32, crc64, Hasher32};
 use std::hash::Hasher;
+use std::io;
 
 const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00];
 const XZ_MAGIC_FOOTER: &[u8] = &[0x59, 0x5A];
@@ -42,9 +42,10 @@ where
     W: io::Write,
 {
     if !util::read_tag(input, XZ_MAGIC)? {
-        return Err(error::Error::XZError(
-            format!("Invalid magic, expected {:?}", XZ_MAGIC),
-        ));
+        return Err(error::Error::XZError(format!(
+            "Invalid magic, expected {:?}",
+            XZ_MAGIC
+        )));
     }
 
     let mut digest = crc32::Digest::new(crc32::IEEE);
@@ -61,8 +62,7 @@ where
     if crc32 != digest_crc32 {
         return Err(error::Error::XZError(format!(
             "Invalid index CRC32: expected 0x{:08x} but got 0x{:08x}",
-            crc32,
-            digest_crc32
+            crc32, digest_crc32
         )));
     }
 
@@ -107,8 +107,7 @@ where
         if flags != footer_flags {
             return Err(error::Error::XZError(format!(
                 "Flags in header (0x{:04x}) does not match footer (0x{:04x})",
-                flags,
-                footer_flags
+                flags, footer_flags
             )));
         }
     }
@@ -117,8 +116,7 @@ where
     if crc32 != digest_crc32 {
         return Err(error::Error::XZError(format!(
             "Invalid footer CRC32: expected 0x{:08x} but got 0x{:08x}",
-            crc32,
-            digest_crc32
+            crc32, digest_crc32
         )));
     }
 
@@ -130,9 +128,9 @@ where
     }
 
     if !util::is_eof(input)? {
-        return Err(error::Error::XZError(
-            format!("Unexpected data after last XZ block"),
-        ));
+        return Err(error::Error::XZError(format!(
+            "Unexpected data after last XZ block"
+        )));
     }
     Ok(())
 }
@@ -167,9 +165,7 @@ where
             if unpadded_size != record.unpadded_size as u64 {
                 return Err(error::Error::XZError(format!(
                     "Invalid index for record {}: unpadded size ({}) does not match index ({})",
-                    i,
-                    record.unpadded_size,
-                    unpadded_size
+                    i, record.unpadded_size, unpadded_size
                 )));
             }
 
@@ -177,9 +173,7 @@ where
             if unpacked_size != record.unpacked_size as u64 {
                 return Err(error::Error::XZError(format!(
                     "Invalid index for record {}: unpacked size ({}) does not match index ({})",
-                    i,
-                    record.unpacked_size,
-                    unpacked_size
+                    i, record.unpacked_size, unpacked_size
                 )));
             }
         }
@@ -190,8 +184,7 @@ where
     let padding_size = ((count ^ 0x03) + 1) & 0x03;
     info!(
         "XZ index: {} byte(s) read, {} byte(s) of padding",
-        count,
-        padding_size
+        count, padding_size
     );
 
     {
@@ -199,9 +192,9 @@ where
         for _ in 0..padding_size {
             let byte = digested.read_u8()?;
             if byte != 0 {
-                return Err(error::Error::XZError(
-                    format!("Invalid index padding, must be null bytes"),
-                ));
+                return Err(error::Error::XZError(format!(
+                    "Invalid index padding, must be null bytes"
+                )));
             }
         }
     }
@@ -213,8 +206,7 @@ where
     if crc32 != digest_crc32 {
         return Err(error::Error::XZError(format!(
             "Invalid index CRC32: expected 0x{:08x} but got 0x{:08x}",
-            crc32,
-            digest_crc32
+            crc32, digest_crc32
         )));
     }
 
@@ -270,8 +262,7 @@ where
     if crc32 != digest_crc32 {
         return Err(error::Error::XZError(format!(
             "Invalid header CRC32: expected 0x{:08x} but got 0x{:08x}",
-            crc32,
-            digest_crc32
+            crc32, digest_crc32
         )));
     }
 
@@ -285,8 +276,7 @@ where
                 if (packed_size as u64) != expected_packed_size {
                     return Err(error::Error::XZError(format!(
                         "Invalid compressed size: expected {} but got {}",
-                        expected_packed_size,
-                        packed_size
+                        expected_packed_size, packed_size
                     )));
                 }
             }
@@ -309,8 +299,7 @@ where
         if (unpacked_size as u64) != expected_unpacked_size {
             return Err(error::Error::XZError(format!(
                 "Invalid decompressed size: expected {} but got {}",
-                expected_unpacked_size,
-                unpacked_size
+                expected_unpacked_size, unpacked_size
             )));
         }
     }
@@ -319,15 +308,14 @@ where
     let padding_size = ((count ^ 0x03) + 1) & 0x03;
     info!(
         "XZ block: {} byte(s) read, {} byte(s) of padding",
-        count,
-        padding_size
+        count, padding_size
     );
     for _ in 0..padding_size {
         let byte = count_input.read_u8()?;
         if byte != 0 {
-            return Err(error::Error::XZError(
-                format!("Invalid block padding, must be null bytes"),
-            ));
+            return Err(error::Error::XZError(format!(
+                "Invalid block padding, must be null bytes"
+            )));
         }
     }
     check_checksum(count_input, tmpbuf.as_slice(), check_method)?;
@@ -355,8 +343,7 @@ where
             if crc32 != digest_crc32 {
                 return Err(error::Error::XZError(format!(
                     "Invalid block CRC32, expected 0x{:08x} but got 0x{:08x}",
-                    crc32,
-                    digest_crc32
+                    crc32, digest_crc32
                 )));
             }
         }
@@ -366,8 +353,7 @@ where
             if crc64 != digest_crc64 {
                 return Err(error::Error::XZError(format!(
                     "Invalid block CRC64, expected 0x{:016x} but got 0x{:016x}",
-                    crc64,
-                    digest_crc64
+                    crc64, digest_crc64
                 )));
             }
         }
@@ -438,8 +424,7 @@ where
 
     info!(
         "XZ block header: {{ packed_size: {:?}, unpacked_size: {:?} }}",
-        packed_size,
-        unpacked_size
+        packed_size, unpacked_size
     );
 
     let mut filters: Vec<Filter> = vec![];
@@ -449,27 +434,26 @@ where
 
         info!(
             "XZ filter: {{ filter_id: {:?}, size_of_properties: {} }}",
-            filter_id,
-            size_of_properties
+            filter_id, size_of_properties
         );
 
         // Early abort to avoid allocating a large vector
         if size_of_properties > header_size {
             return Err(error::Error::XZError(format!(
                 "Size of filter properties exceeds block header size ({} > {})",
-                size_of_properties,
-                header_size
+                size_of_properties, header_size
             )));
         }
 
         let mut buf = vec![0; size_of_properties as usize];
-        try!(input.read_exact(buf.as_mut_slice()).or_else(|e| {
-            Err(error::Error::XZError(format!(
-                "Could not read filter properties of size {}: {}",
-                size_of_properties,
-                e
-            )))
-        }));
+        try!(
+            input.read_exact(buf.as_mut_slice()).or_else(|e| {
+                Err(error::Error::XZError(format!(
+                    "Could not read filter properties of size {}: {}",
+                    size_of_properties, e
+                )))
+            })
+        );
 
         info!("XZ filter properties: {:?}", buf);
 
@@ -480,9 +464,9 @@ where
     }
 
     if !util::flush_zero_padding(input)? {
-        return Err(error::Error::XZError(
-            format!("Invalid block header padding, must be null bytes"),
-        ));
+        return Err(error::Error::XZError(format!(
+            "Invalid block header padding, must be null bytes"
+        )));
     }
 
     Ok(BlockHeader {
@@ -505,7 +489,7 @@ where
         }
     }
 
-    Err(error::Error::XZError(
-        format!("Invalid multi-byte encoding"),
-    ))
+    Err(error::Error::XZError(format!(
+        "Invalid multi-byte encoding"
+    )))
 }
