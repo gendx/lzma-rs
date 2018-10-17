@@ -447,12 +447,12 @@ where
 
         let mut buf = vec![0; size_of_properties as usize];
         try!(
-            input.read_exact(buf.as_mut_slice()).or_else(|e| {
-                Err(error::Error::XZError(format!(
+            input
+                .read_exact(buf.as_mut_slice())
+                .or_else(|e| Err(error::Error::XZError(format!(
                     "Could not read filter properties of size {}: {}",
                     size_of_properties, e
-                )))
-            })
+                ))))
         );
 
         info!("XZ filter properties: {:?}", buf);

@@ -17,12 +17,9 @@ pub fn lzma_decompress<R: io::BufRead, W: io::Write>(
     let params = decode::lzma::LZMAParams::read_header(input)?;
     let mut decoder = decode::lzma::new_circular(output, params)?;
     let mut rangecoder = try!(
-        decode::rangecoder::RangeDecoder::new(input).or_else(|e| {
-            Err(error::Error::LZMAError(format!(
-                "LZMA stream too short: {}",
-                e
-            )))
-        })
+        decode::rangecoder::RangeDecoder::new(input).or_else(|e| Err(error::Error::LZMAError(
+            format!("LZMA stream too short: {}", e)
+        )))
     );
     decoder.process(&mut rangecoder)?;
     decoder.output.finish()?;

@@ -173,11 +173,7 @@ where
     }
 
     fn consume(&mut self, amt: usize) {
-        let len = if amt <= self.len {
-            amt
-        } else {
-            self.len
-        };
+        let len = if amt <= self.len { amt } else { self.len };
         self.read.consume(len);
         self.len -= len;
     }

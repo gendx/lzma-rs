@@ -21,12 +21,12 @@ impl LZMAParams {
     {
         // Properties
         let props = try!(
-            input.read_u8().or_else(|e| {
-                Err(error::Error::LZMAError(format!(
+            input
+                .read_u8()
+                .or_else(|e| Err(error::Error::LZMAError(format!(
                     "LZMA header too short: {}",
                     e
-                )))
-            })
+                ))))
         );
 
         let mut pb = props as u32;
