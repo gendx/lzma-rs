@@ -1,4 +1,8 @@
-# lzma-rs [![Build Status](https://travis-ci.org/gendx/lzma-rs.svg?branch=master)](https://travis-ci.org/gendx/lzma-rs)
+# lzma-rs
+
+[![Crate](https://img.shields.io/crates/v/lzma-rs.svg)](https://crates.io/crates/lzma-rs)
+[![Documentation](https://docs.rs/lzma-rs/badge.svg)](https://docs.rs/lzma-rs)
+[![Build Status](https://travis-ci.org/gendx/lzma-rs.svg?branch=master)](https://travis-ci.org/gendx/lzma-rs)
 
 This project is a decoder for LZMA and its variants written in pure Rust, with focus on clarity.
 It already supports LZMA, LZMA2 and a subset of the `.xz` file format.
