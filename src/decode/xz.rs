@@ -5,6 +5,7 @@ use decode::util;
 use error;
 use std::hash::Hasher;
 use std::io;
+use std::io::Read;
 
 const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00];
 const XZ_MAGIC_FOOTER: &[u8] = &[0x59, 0x5A];
@@ -252,8 +253,8 @@ where
     let header_size = ((header_size as u64) << 2) - 1;
 
     let block_header = {
-        let mut subbuf = util::SubBufRead::new(count_input, header_size as usize);
-        let mut digested = io::BufReader::new(util::HasherRead::new(&mut subbuf, &mut digest));
+        let mut taken = count_input.take(header_size);
+        let mut digested = io::BufReader::new(util::HasherRead::new(&mut taken, &mut digest));
         read_block_header(&mut digested, header_size)?
     };
 

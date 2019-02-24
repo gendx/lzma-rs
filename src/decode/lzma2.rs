@@ -3,9 +3,9 @@ use decode::lzbuffer;
 use decode::lzbuffer::LZBuffer;
 use decode::lzma;
 use decode::rangecoder;
-use decode::util;
 use error;
 use std::io;
+use std::io::Read;
 
 pub fn decode_stream<R, W>(input: &mut R, output: &mut W) -> error::Result<()>
 where
@@ -100,7 +100,7 @@ where
             e
         )))
     })?;
-    let packed_size = (packed_size as usize) + 1;
+    let packed_size = (packed_size as u64) + 1;
 
     info!(
         "LZMA2 compressed block {{ unpacked_size: {}, packed_size: {}, reset_dict: {}, reset_state: {}, reset_props: {} }}",
@@ -160,8 +160,8 @@ where
 
     decoder.set_unpacked_size(Some(unpacked_size));
 
-    let mut subbufread = util::SubBufRead::new(input, packed_size);
-    let mut rangecoder = rangecoder::RangeDecoder::new(&mut subbufread).or_else(|e| {
+    let mut taken = input.take(packed_size);
+    let mut rangecoder = rangecoder::RangeDecoder::new(&mut taken).or_else(|e| {
         Err(error::Error::LZMAError(format!(
             "LZMA input too short: {}",
             e
