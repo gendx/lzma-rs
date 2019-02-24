@@ -28,7 +28,7 @@ fn round_trip_file(filename: &str) {
 
 #[test]
 fn round_trip_basics() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     round_trip(b"");
     // Note: we use vec! to avoid storing the slice in the binary
     round_trip(vec![0x00; 1_000_000].as_slice());
@@ -37,13 +37,13 @@ fn round_trip_basics() {
 
 #[test]
 fn round_trip_hello() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     round_trip(b"Hello world");
 }
 
 #[test]
 fn round_trip_files() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     round_trip_file("tests/files/foo.txt");
 }
 
@@ -63,13 +63,13 @@ fn decomp_big_file(compfile: &str, plainfile: &str) {
 
 #[test]
 fn big_file() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     decomp_big_file("tests/files/foo.txt.xz", "tests/files/foo.txt");
 }
 
 #[test]
 fn decompress_empty_world() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     let mut x: &[u8] = b"\xfd\x37\x7a\x58\x5a\x00\x00\x04\xe6\xd6\xb4\x46\x00\x00\x00\x00\
                          \x1c\xdf\x44\x21\x1f\xb6\xf3\x7d\x01\x00\x00\x00\x00\x04\x59\x5a\
                          ";
@@ -80,7 +80,7 @@ fn decompress_empty_world() {
 
 #[test]
 fn decompress_hello_world() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     let mut x: &[u8] = b"\xfd\x37\x7a\x58\x5a\x00\x00\x04\xe6\xd6\xb4\x46\x02\x00\x21\x01\
                          \x16\x00\x00\x00\x74\x2f\xe5\xa3\x01\x00\x0b\x48\x65\x6c\x6c\x6f\
                          \x20\x77\x6f\x72\x6c\x64\x0a\x00\xca\xec\x49\x05\x66\x3f\x67\x98\

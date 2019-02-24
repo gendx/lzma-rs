@@ -28,7 +28,7 @@ fn round_trip_file(filename: &str) {
 
 #[test]
 fn round_trip_basics() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     round_trip(b"");
     // Note: we use vec! to avoid storing the slice in the binary
     round_trip(vec![0x00; 1_000_000].as_slice());
@@ -37,12 +37,12 @@ fn round_trip_basics() {
 
 #[test]
 fn round_trip_hello() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     round_trip(b"Hello world");
 }
 
 #[test]
 fn round_trip_files() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     round_trip_file("tests/files/foo.txt");
 }

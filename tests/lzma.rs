@@ -42,7 +42,7 @@ fn decomp_big_file(compfile: &str, plainfile: &str) {
 
 #[test]
 fn decompress_short_header() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     let mut decomp: Vec<u8> = Vec::new();
     // TODO: compare io::Errors?
     assert_eq!(
@@ -56,7 +56,7 @@ fn decompress_short_header() {
 
 #[test]
 fn round_trip_basics() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     round_trip(b"");
     // Note: we use vec! to avoid storing the slice in the binary
     round_trip(vec![0x00; 1_000_000].as_slice());
@@ -65,26 +65,26 @@ fn round_trip_basics() {
 
 #[test]
 fn round_trip_hello() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     round_trip(b"Hello world");
 }
 
 #[test]
 fn round_trip_files() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     round_trip_file("tests/files/foo.txt");
 }
 
 #[test]
 fn big_file() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     decomp_big_file("tests/files/foo.txt.lzma", "tests/files/foo.txt");
     decomp_big_file("tests/files/hugedict.txt.lzma", "tests/files/foo.txt");
 }
 
 #[test]
 fn decompress_empty_world() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     let mut x: &[u8] = b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x83\xff\
                          \xfb\xff\xff\xc0\x00\x00\x00";
     let mut decomp: Vec<u8> = Vec::new();
@@ -94,7 +94,7 @@ fn decompress_empty_world() {
 
 #[test]
 fn decompress_hello_world() {
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     let mut x: &[u8] = b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
                          \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
                          \xa5\xb0\x00";
@@ -106,7 +106,7 @@ fn decompress_hello_world() {
 #[test]
 fn decompress_huge_dict() {
     // Hello world with a dictionary of size 0x7F7F7F7F
-    let _ = env_logger::init();
+    let _ = env_logger::try_init();
     let mut x: &[u8] = b"\x5d\x7f\x7f\x7f\x7f\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
                          \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
                          \xa5\xb0\x00";
