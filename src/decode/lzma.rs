@@ -20,14 +20,12 @@ impl LZMAParams {
         R: io::BufRead,
     {
         // Properties
-        let props = try!(
-            input
-                .read_u8()
-                .or_else(|e| Err(error::Error::LZMAError(format!(
-                    "LZMA header too short: {}",
-                    e
-                ))))
-        );
+        let props = input.read_u8().or_else(|e| {
+            Err(error::Error::LZMAError(format!(
+                "LZMA header too short: {}",
+                e
+            )))
+        })?;
 
         let mut pb = props as u32;
         if pb >= 225 {
@@ -45,9 +43,12 @@ impl LZMAParams {
         info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
 
         // Dictionary
-        let dict_size_provided = try!(input.read_u32::<LittleEndian>().or_else(|e| Err(
-            error::Error::LZMAError(format!("LZMA header too short: {}", e),)
-        )));
+        let dict_size_provided = input.read_u32::<LittleEndian>().or_else(|e| {
+            Err(error::Error::LZMAError(format!(
+                "LZMA header too short: {}",
+                e
+            )))
+        })?;
         let dict_size = if dict_size_provided < 0x1000 {
             0x1000
         } else {
@@ -57,9 +58,12 @@ impl LZMAParams {
         info!("Dict size: {}", dict_size);
 
         // Unpacked size
-        let unpacked_size_provided = try!(input.read_u64::<LittleEndian>().or_else(|e| Err(
-            error::Error::LZMAError(format!("LZMA header too short: {}", e),)
-        )));
+        let unpacked_size_provided = input.read_u64::<LittleEndian>().or_else(|e| {
+            Err(error::Error::LZMAError(format!(
+                "LZMA header too short: {}",
+                e
+            )))
+        })?;
         let marker_mandatory: bool = unpacked_size_provided == 0xFFFF_FFFF_FFFF_FFFF;
         let unpacked_size = if marker_mandatory {
             None
