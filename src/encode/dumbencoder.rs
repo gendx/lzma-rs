@@ -1,5 +1,6 @@
-use byteorder::{LittleEndian, WriteBytesExt};
+use crate::compress::{Options, UnpackedSize};
 use crate::encode::rangecoder;
+use byteorder::{LittleEndian, WriteBytesExt};
 use std::io;
 
 pub struct Encoder<'a, W>
@@ -19,7 +20,7 @@ impl<'a, W> Encoder<'a, W>
 where
     W: io::Write,
 {
-    pub fn from_stream(stream: &'a mut W) -> io::Result<Self> {
+    pub fn from_stream(stream: &'a mut W, options: &Options) -> io::Result<Self> {
         let dict_size = 0x800000;
 
         // Properties
@@ -32,8 +33,22 @@ where
         stream.write_u32::<LittleEndian>(dict_size)?;
 
         // Unpacked size
-        info!("Unpacked size: unknown");
-        stream.write_u64::<LittleEndian>(0xFFFF_FFFF_FFFF_FFFF)?;
+        match &options.unpacked_size {
+            UnpackedSize::WriteToHeader(unpacked_size) => {
+                let value: u64 = match unpacked_size {
+                    None => {
+                        info!("Unpacked size: unknown");
+                        0xFFFF_FFFF_FFFF_FFFF
+                    }
+                    Some(x) => {
+                        info!("Unpacked size: {}", x);
+                        *x
+                    }
+                };
+                stream.write_u64::<LittleEndian>(value)?;
+            }
+            UnpackedSize::SkipWritingToHeader => {}
+        };
 
         let encoder = Encoder {
             rangecoder: rangecoder::RangeEncoder::new(stream),
