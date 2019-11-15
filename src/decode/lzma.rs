@@ -1,7 +1,7 @@
 use byteorder::{LittleEndian, ReadBytesExt};
-use decode::lzbuffer;
-use decode::rangecoder;
-use error;
+use crate::decode::lzbuffer;
+use crate::decode::rangecoder;
+use crate::error;
 use std::io;
 
 pub struct LZMAParams {

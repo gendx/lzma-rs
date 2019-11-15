@@ -7,7 +7,7 @@ mod decode;
 mod encode;
 pub mod error;
 
-use decode::lzbuffer::LZBuffer;
+use crate::decode::lzbuffer::LZBuffer;
 use std::io;
 
 pub fn lzma_decompress<R: io::BufRead, W: io::Write>(

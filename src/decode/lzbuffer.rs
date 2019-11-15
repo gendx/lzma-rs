@@ -1,4 +1,4 @@
-use error;
+use crate::error;
 use std::io;
 
 pub trait LZBuffer {

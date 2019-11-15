@@ -1,6 +1,6 @@
 use byteorder::{BigEndian, ReadBytesExt};
-use decode::util;
-use error;
+use crate::decode::util;
+use crate::error;
 use std::io;
 
 pub struct RangeDecoder<'a, R>

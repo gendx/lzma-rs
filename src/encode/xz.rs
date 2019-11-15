@@ -1,8 +1,8 @@
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
 use crc::{crc32, Hasher32};
-use decode;
-use encode::lzma2;
-use encode::util;
+use crate::decode;
+use crate::encode::lzma2;
+use crate::encode::util;
 use std::io;
 use std::io::Write;
 
@@ -113,7 +113,7 @@ where
     Ok((unpadded_size, unpacked_size))
 }
 
-fn write_index<W>(output: &mut W, unpadded_size: usize, unpacked_size: usize) -> io::Result<(usize)>
+fn write_index<W>(output: &mut W, unpadded_size: usize, unpacked_size: usize) -> io::Result<usize>
 where
     W: io::Write,
 {
