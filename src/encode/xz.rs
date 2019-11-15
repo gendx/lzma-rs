@@ -90,7 +90,7 @@ where
             let properties = 22; // TODO
             digested.write_u8(properties)?;
             let padding = [0, 0, 0];
-            digested.write(&padding)?;
+            digested.write_all(&padding)?;
         }
         let crc32 = digest.sum32();
         count_output.write_u32::<LittleEndian>(crc32)?;
@@ -107,7 +107,7 @@ where
 
     let padding_size = ((unpadded_size ^ 0x03) + 1) & 0x03;
     let padding = vec![0; padding_size];
-    output.write(padding.as_slice())?;
+    output.write_all(padding.as_slice())?;
     // Checksum = None (cf. above)
 
     Ok((unpadded_size, unpacked_size))
@@ -136,7 +136,7 @@ where
     {
         let mut digested = util::HasherWrite::new(&mut count_output, &mut digest);
         let padding = vec![0; padding_size];
-        digested.write(padding.as_slice())?;
+        digested.write_all(padding.as_slice())?;
     }
 
     let crc32 = digest.sum32();

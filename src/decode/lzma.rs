@@ -74,11 +74,11 @@ impl LZMAParams {
         info!("Unpacked size: {:?}", unpacked_size);
 
         let params = LZMAParams {
-            lc: lc,
-            lp: lp,
-            pb: pb,
-            dict_size: dict_size,
-            unpacked_size: unpacked_size,
+            lc,
+            lp,
+            pb,
+            dict_size,
+            unpacked_size,
         };
 
         Ok(params)
@@ -124,11 +124,11 @@ where
     W: io::Write,
 {
     DecoderState {
-        output: output,
-        lc: lc,
-        lp: lp,
-        pb: pb,
-        unpacked_size: unpacked_size,
+        output,
+        lc,
+        lp,
+        pb,
+        unpacked_size,
         literal_probs: vec![vec![0x400; 0x300]; 1 << (lc + lp)],
         pos_slot_decoder: vec![rangecoder::BitTree::new(6); 4],
         align_decoder: rangecoder::BitTree::new(4),

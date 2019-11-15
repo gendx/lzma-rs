@@ -138,7 +138,7 @@ where
 
 fn check_index<'a, R>(
     count_input: &mut util::CountBufRead<'a, R>,
-    records: &Vec<Record>,
+    records: &[Record],
 ) -> error::Result<()>
 where
     R: io::BufRead,

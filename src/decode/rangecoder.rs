@@ -18,7 +18,7 @@ where
 {
     pub fn new(stream: &'a mut R) -> io::Result<Self> {
         let mut dec = Self {
-            stream: stream,
+            stream,
             range: 0xFFFF_FFFF,
             code: 0,
         };
@@ -141,7 +141,7 @@ pub struct BitTree {
 impl BitTree {
     pub fn new(num_bits: usize) -> Self {
         BitTree {
-            num_bits: num_bits,
+            num_bits,
             probs: vec![0x400; 1 << num_bits],
         }
     }

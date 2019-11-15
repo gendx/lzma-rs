@@ -31,7 +31,7 @@ where
 {
     pub fn from_stream(stream: &'a mut W) -> Self {
         Self {
-            stream: stream,
+            stream,
             buf: Vec::new(),
             len: 0,
         }
@@ -138,9 +138,9 @@ where
     pub fn from_stream(stream: &'a mut W, dict_size: usize) -> Self {
         info!("Dict size in LZ buffer: {}", dict_size);
         Self {
-            stream: stream,
+            stream,
             buf: vec![0; dict_size],
-            dict_size: dict_size,
+            dict_size,
             cursor: 0,
             len: 0,
         }
