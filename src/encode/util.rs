@@ -52,7 +52,7 @@ where
 {
     pub fn new(write: &'a mut W) -> Self {
         Self {
-            write: write,
+            write,
             count: 0,
         }
     }

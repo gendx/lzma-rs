@@ -86,7 +86,7 @@ where
 {
     pub fn new(read: &'a mut R) -> Self {
         Self {
-            read: read,
+            read,
             count: 0,
         }
     }

@@ -9,6 +9,7 @@ readme = "README.md"
 categories = ["compression"]
 keywords = ["lzma", "compression", "decompression"]
 exclude = ["tests/*"]
+edition = "2018"
 
 [dependencies]
 byteorder = "^1.0.0"

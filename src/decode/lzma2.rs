@@ -1,9 +1,9 @@
 use byteorder::{BigEndian, ReadBytesExt};
-use decode::lzbuffer;
-use decode::lzbuffer::LZBuffer;
-use decode::lzma;
-use decode::rangecoder;
-use error;
+use crate::decode::lzbuffer;
+use crate::decode::lzbuffer::LZBuffer;
+use crate::decode::lzma;
+use crate::decode::rangecoder;
+use crate::error;
 use std::io;
 use std::io::Read;
 

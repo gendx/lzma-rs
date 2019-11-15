@@ -18,7 +18,7 @@ where
 {
     pub fn new(stream: &'a mut W) -> Self {
         let enc = Self {
-            stream: stream,
+            stream,
             range: 0xFFFF_FFFF,
             low: 0,
             cache: 0,

@@ -1,5 +1,5 @@
 use byteorder::{LittleEndian, WriteBytesExt};
-use encode::rangecoder;
+use crate::encode::rangecoder;
 use std::io;
 
 pub struct Encoder<'a, W>

@@ -1,8 +1,8 @@
 use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
 use crc::{crc32, Hasher32};
-use decode;
-use encode::lzma2;
-use encode::util;
+use crate::decode;
+use crate::encode::lzma2;
+use crate::encode::util;
 use std::io;
 use std::io::Write;
 
@@ -90,7 +90,7 @@ where
             let properties = 22; // TODO
             digested.write_u8(properties)?;
             let padding = [0, 0, 0];
-            digested.write(&padding)?;
+            digested.write_all(&padding)?;
         }
         let crc32 = digest.sum32();
         count_output.write_u32::<LittleEndian>(crc32)?;
@@ -107,13 +107,13 @@ where
 
     let padding_size = ((unpadded_size ^ 0x03) + 1) & 0x03;
     let padding = vec![0; padding_size];
-    output.write(padding.as_slice())?;
+    output.write_all(padding.as_slice())?;
     // Checksum = None (cf. above)
 
     Ok((unpadded_size, unpacked_size))
 }
 
-fn write_index<W>(output: &mut W, unpadded_size: usize, unpacked_size: usize) -> io::Result<(usize)>
+fn write_index<W>(output: &mut W, unpadded_size: usize, unpacked_size: usize) -> io::Result<usize>
 where
     W: io::Write,
 {
@@ -136,7 +136,7 @@ where
     {
         let mut digested = util::HasherWrite::new(&mut count_output, &mut digest);
         let padding = vec![0; padding_size];
-        digested.write(padding.as_slice())?;
+        digested.write_all(padding.as_slice())?;
     }
 
     let crc32 = digest.sum32();
