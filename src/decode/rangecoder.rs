@@ -56,13 +56,7 @@ where
     fn get_bit(&mut self) -> error::Result<bool> {
         self.range >>= 1;
 
-        if self.code == self.range {
-            return Err(error::Error::LZMAError(String::from(
-                "Corrupted range coding",
-            )));
-        }
-
-        let bit = self.code > self.range;
+        let bit = self.code >= self.range;
         if bit {
             self.code -= self.range
         }

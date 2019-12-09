@@ -72,6 +72,7 @@ fn round_trip_hello() {
 fn round_trip_files() {
     let _ = env_logger::try_init();
     round_trip_file("tests/files/foo.txt");
+    round_trip_file("tests/files/bad-random-data");
 }
 
 #[test]
@@ -79,6 +80,7 @@ fn big_file() {
     let _ = env_logger::try_init();
     decomp_big_file("tests/files/foo.txt.lzma", "tests/files/foo.txt");
     decomp_big_file("tests/files/hugedict.txt.lzma", "tests/files/foo.txt");
+    decomp_big_file("tests/files/bad-random-data.lzma", "tests/files/bad-random-data");
 }
 
 #[test]
