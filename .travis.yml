@@ -9,3 +9,9 @@ rust:
 matrix:
     allow_failures:
         - rust: nightly
+before_script:
+    - rustup component add rustfmt
+script:
+    - cargo fmt -- --check
+    - cargo build --verbose
+    - cargo test --verbose
