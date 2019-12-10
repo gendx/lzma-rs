@@ -1,6 +1,6 @@
-use byteorder::{BigEndian, ReadBytesExt};
 use crate::decode::util;
 use crate::error;
+use byteorder::{BigEndian, ReadBytesExt};
 use std::io;
 
 pub struct RangeDecoder<'a, R>
@@ -35,19 +35,12 @@ where
 
     #[inline]
     fn normalize(&mut self) -> io::Result<()> {
-        trace!(
-            "  {{ range: {:08x}, code: {:08x} }}",
-            self.range,
-            self.code
-        );
+        trace!("  {{ range: {:08x}, code: {:08x} }}", self.range, self.code);
         if self.range < 0x1000000 {
             self.range <<= 8;
             self.code = (self.code << 8) ^ (self.stream.read_u8()? as u32);
 
-            debug!(
-                "+ {{ range: {:08x}, code: {:08x} }}",
-                self.range, self.code
-            );
+            debug!("+ {{ range: {:08x}, code: {:08x} }}", self.range, self.code);
         }
         Ok(())
     }

@@ -51,10 +51,7 @@ where
     W: io::Write,
 {
     pub fn new(write: &'a mut W) -> Self {
-        Self {
-            write,
-            count: 0,
-        }
+        Self { write, count: 0 }
     }
 
     pub fn count(&self) -> usize {
