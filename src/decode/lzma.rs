@@ -62,7 +62,7 @@ impl LZMAParams {
 
         // Unpacked size
         let unpacked_size: Option<u64> = match options.unpacked_size {
-            UnpackedSize::ReadHeaderAndUseHeader => {
+            UnpackedSize::ReadFromHeader => {
                 let unpacked_size_provided = input.read_u64::<LittleEndian>().or_else(|e| {
                     Err(error::Error::LZMAError(format!(
                         "LZMA header too short: {}",
@@ -80,7 +80,7 @@ impl LZMAParams {
                 input.read_u64::<LittleEndian>()?;
                 x
             }
-            UnpackedSize::SkipHeaderAndUseProvided(x) => x
+            UnpackedSize::UseProvided(x) => x
         };
 
         info!("Unpacked size: {:?}", unpacked_size);

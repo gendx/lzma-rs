@@ -26,13 +26,13 @@ pub fn lzma_decompress<R: io::BufRead, W: io::Write>(
     lzma_decompress_with_options(input, output, &decompress::Options::default())
 }
 
-/// Decompress LZMA data with the provided options
+/// Decompress LZMA data with the provided options.
 pub fn lzma_decompress_with_options<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
     options: &decompress::Options,
 ) -> error::Result<()> {
-    let params = decode::lzma::LZMAParams::read_header(input, &options)?;
+    let params = decode::lzma::LZMAParams::read_header(input, options)?;
     let mut decoder = decode::lzma::new_circular(output, params)?;
     let mut rangecoder = decode::rangecoder::RangeDecoder::new(input).or_else(|e| {
         Err(error::Error::LZMAError(format!(
