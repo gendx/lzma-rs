@@ -1,8 +1,8 @@
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use crc::{crc32, crc64, Hasher32};
 use crate::decode::lzma2;
 use crate::decode::util;
 use crate::error;
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use crc::{crc32, crc64, Hasher32};
 use std::hash::Hasher;
 use std::io;
 use std::io::Read;

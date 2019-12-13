@@ -1,7 +1,7 @@
-use byteorder::{LittleEndian, ReadBytesExt};
 use crate::decode::lzbuffer;
 use crate::decode::rangecoder;
 use crate::error;
+use byteorder::{LittleEndian, ReadBytesExt};
 use std::io;
 
 use crate::decompress::Options;

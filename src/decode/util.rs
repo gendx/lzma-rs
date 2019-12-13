@@ -85,10 +85,7 @@ where
     R: io::BufRead,
 {
     pub fn new(read: &'a mut R) -> Self {
-        Self {
-            read,
-            count: 0,
-        }
+        Self { read, count: 0 }
     }
 
     pub fn count(&self) -> usize {

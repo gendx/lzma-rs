@@ -96,3 +96,39 @@ where
         self.normalize()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::decode::rangecoder::RangeDecoder;
+    use std::io::BufReader;
+
+    fn encode_decode(prob_init: u16, bits: &[bool]) {
+        let mut buf: Vec<u8> = Vec::new();
+
+        let mut encoder = RangeEncoder::new(&mut buf);
+        let mut prob = prob_init;
+        for &b in bits {
+            encoder.encode_bit(&mut prob, b).unwrap();
+        }
+        encoder.finish().unwrap();
+
+        let mut bufread = BufReader::new(buf.as_slice());
+        let mut decoder = RangeDecoder::new(&mut bufread).unwrap();
+        let mut prob = prob_init;
+        for &b in bits {
+            assert_eq!(decoder.decode_bit(&mut prob).unwrap(), b);
+        }
+        assert!(decoder.is_finished_ok().unwrap());
+    }
+
+    #[test]
+    fn test_encode_decode_zeros() {
+        encode_decode(0x400, &[false; 10000]);
+    }
+
+    #[test]
+    fn test_encode_decode_ones() {
+        encode_decode(0x400, &[true; 10000]);
+    }
+}
