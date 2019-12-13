@@ -163,18 +163,6 @@ fn unpacked_size_provided_outside() {
 }
 
 #[test]
-fn unpacked_size_provided_outside_as_none() {
-    let data = b"Some data";
-    let encode_options = lzma_rs::compress::Options {
-        unpacked_size: lzma_rs::compress::UnpackedSize::SkipWritingToHeader,
-    };
-    let decode_options = lzma_rs::decompress::Options {
-        unpacked_size: lzma_rs::decompress::UnpackedSize::UseProvided(None),
-    };
-    round_trip_with_options(&data[..], &encode_options, &decode_options);
-}
-
-#[test]
 fn unpacked_size_write_some_to_header_but_use_provided_on_read() {
     let data = b"Some data";
     let encode_options = lzma_rs::compress::Options {
@@ -200,20 +188,6 @@ fn unpacked_size_write_none_to_header_and_use_provided_on_read() {
         unpacked_size: lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(Some(
             data.len() as u64,
         )),
-    };
-    round_trip_with_options(&data[..], &encode_options, &decode_options);
-}
-
-#[test]
-fn unpacked_size_write_some_to_header_but_use_provided_none_on_read() {
-    let data = b"Some data";
-    let encode_options = lzma_rs::compress::Options {
-        unpacked_size: lzma_rs::compress::UnpackedSize::WriteToHeader(
-            Some(data.len() as u64),
-        ),
-    };
-    let decode_options = lzma_rs::decompress::Options {
-        unpacked_size: lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(None),
     };
     round_trip_with_options(&data[..], &encode_options, &decode_options);
 }
