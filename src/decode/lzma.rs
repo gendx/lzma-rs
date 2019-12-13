@@ -75,12 +75,12 @@ impl LZMAParams {
                 } else {
                     Some(unpacked_size_provided)
                 }
-            },
+            }
             UnpackedSize::ReadHeaderButUseProvided(x) => {
                 input.read_u64::<LittleEndian>()?;
                 x
             }
-            UnpackedSize::UseProvided(x) => x
+            UnpackedSize::UseProvided(x) => x,
         };
 
         info!("Unpacked size: {:?}", unpacked_size);
