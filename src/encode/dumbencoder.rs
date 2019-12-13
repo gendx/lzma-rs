@@ -10,6 +10,7 @@ where
     rangecoder: rangecoder::RangeEncoder<'a, W>,
     literal_probs: [[u16; 0x300]; 8],
     is_match: [u16; 4], // true = LZ, false = literal
+    unpacked_size: UnpackedSize,
 }
 
 const LC: u32 = 3;
@@ -54,6 +55,7 @@ where
             rangecoder: rangecoder::RangeEncoder::new(stream),
             literal_probs: [[0x400; 0x300]; 8],
             is_match: [0x400; 4],
+            unpacked_size: options.unpacked_size.clone(),
         };
 
         Ok(encoder)
@@ -83,33 +85,39 @@ where
     }
 
     fn finish(&mut self, input_len: usize) -> io::Result<()> {
-        // Write end-of-stream marker
-        let pos_state = input_len & 3;
+        match self.unpacked_size {
+            UnpackedSize::SkipWritingToHeader => {}
+            UnpackedSize::WriteToHeader(Some(_)) => {}
+            UnpackedSize::WriteToHeader(None) => {
+                // Write end-of-stream marker
+                let pos_state = input_len & 3;
 
-        // Match
-        self.rangecoder
-            .encode_bit(&mut self.is_match[pos_state], true)?;
-        // New distance
-        self.rangecoder.encode_bit(&mut 0x400, false)?;
+                // Match
+                self.rangecoder
+                    .encode_bit(&mut self.is_match[pos_state], true)?;
+                // New distance
+                self.rangecoder.encode_bit(&mut 0x400, false)?;
 
-        // Dummy len, as small as possible (len = 0)
-        for _ in 0..4 {
-            self.rangecoder.encode_bit(&mut 0x400, false)?;
-        }
+                // Dummy len, as small as possible (len = 0)
+                for _ in 0..4 {
+                    self.rangecoder.encode_bit(&mut 0x400, false)?;
+                }
 
-        // Distance marker = 0xFFFFFFFF
-        // pos_slot = 63
-        for _ in 0..6 {
-            self.rangecoder.encode_bit(&mut 0x400, true)?;
+                // Distance marker = 0xFFFFFFFF
+                // pos_slot = 63
+                for _ in 0..6 {
+                    self.rangecoder.encode_bit(&mut 0x400, true)?;
+                }
+                // num_direct_bits = 30
+                // result = 3 << 30 = C000_0000
+                //        + 3FFF_FFF0  (26 bits)
+                //        + F          ( 4 bits)
+                for _ in 0..30 {
+                    self.rangecoder.encode_bit(&mut 0x400, true)?;
+                }
+                //        = FFFF_FFFF
+            }
         }
-        // num_direct_bits = 30
-        // result = 3 << 30 = C000_0000
-        //        + 3FFF_FFF0  (26 bits)
-        //        + F          ( 4 bits)
-        for _ in 0..30 {
-            self.rangecoder.encode_bit(&mut 0x400, true)?;
-        }
-        //        = FFFF_FFFF
 
         // Flush range coder
         self.rangecoder.finish()
