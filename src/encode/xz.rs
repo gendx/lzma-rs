@@ -1,8 +1,8 @@
-use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
-use crc::{crc32, Hasher32};
 use crate::decode;
 use crate::encode::lzma2;
 use crate::encode::util;
+use byteorder::{BigEndian, LittleEndian, WriteBytesExt};
+use crc::{crc32, Hasher32};
 use std::io;
 use std::io::Write;
 
