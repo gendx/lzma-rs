@@ -55,7 +55,7 @@ where
             rangecoder: rangecoder::RangeEncoder::new(stream),
             literal_probs: [[0x400; 0x300]; 8],
             is_match: [0x400; 4],
-            unpacked_size: options.unpacked_size.clone(),
+            unpacked_size: options.unpacked_size,
         };
 
         Ok(encoder)

@@ -1,5 +1,5 @@
 /// Options for the `lzma_compress` function
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Options {
     /// Defines whether the unpacked size should be written to the header.
     /// The default is
@@ -8,7 +8,7 @@ pub struct Options {
 }
 
 /// Alternatives for handling unpacked size
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum UnpackedSize {
     /// If the value is `Some(u64)`, write the provided u64 value to the header.
     /// There is currently no check in place that verifies that this is the actual number of bytes
