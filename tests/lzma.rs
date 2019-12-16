@@ -81,8 +81,8 @@ fn big_file() {
     decomp_big_file("tests/files/foo.txt.lzma", "tests/files/foo.txt");
     decomp_big_file("tests/files/hugedict.txt.lzma", "tests/files/foo.txt");
     decomp_big_file(
-        "tests/files/bad-random-data.lzma",
-        "tests/files/bad-random-data",
+        "tests/files/range-coder-edge-case.lzma",
+        "tests/files/range-coder-edge-case",
     );
 }
 
