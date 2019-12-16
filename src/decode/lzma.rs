@@ -4,6 +4,9 @@ use crate::error;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io;
 
+use crate::decompress::Options;
+use crate::decompress::UnpackedSize;
+
 pub struct LZMAParams {
     // most lc significant bits of previous byte are part of the literal context
     lc: u32, // 0..8
@@ -15,7 +18,7 @@ pub struct LZMAParams {
 }
 
 impl LZMAParams {
-    pub fn read_header<R>(input: &mut R) -> error::Result<LZMAParams>
+    pub fn read_header<R>(input: &mut R, options: &Options) -> error::Result<LZMAParams>
     where
         R: io::BufRead,
     {
@@ -58,17 +61,26 @@ impl LZMAParams {
         info!("Dict size: {}", dict_size);
 
         // Unpacked size
-        let unpacked_size_provided = input.read_u64::<LittleEndian>().or_else(|e| {
-            Err(error::Error::LZMAError(format!(
-                "LZMA header too short: {}",
-                e
-            )))
-        })?;
-        let marker_mandatory: bool = unpacked_size_provided == 0xFFFF_FFFF_FFFF_FFFF;
-        let unpacked_size = if marker_mandatory {
-            None
-        } else {
-            Some(unpacked_size_provided)
+        let unpacked_size: Option<u64> = match options.unpacked_size {
+            UnpackedSize::ReadFromHeader => {
+                let unpacked_size_provided = input.read_u64::<LittleEndian>().or_else(|e| {
+                    Err(error::Error::LZMAError(format!(
+                        "LZMA header too short: {}",
+                        e
+                    )))
+                })?;
+                let marker_mandatory: bool = unpacked_size_provided == 0xFFFF_FFFF_FFFF_FFFF;
+                if marker_mandatory {
+                    None
+                } else {
+                    Some(unpacked_size_provided)
+                }
+            }
+            UnpackedSize::ReadHeaderButUseProvided(x) => {
+                input.read_u64::<LittleEndian>()?;
+                x
+            }
+            UnpackedSize::UseProvided(x) => x,
         };
 
         info!("Unpacked size: {:?}", unpacked_size);
