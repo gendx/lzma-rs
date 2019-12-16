@@ -72,7 +72,7 @@ fn round_trip_hello() {
 fn round_trip_files() {
     let _ = env_logger::try_init();
     round_trip_file("tests/files/foo.txt");
-    round_trip_file("tests/files/bad-random-data");
+    round_trip_file("tests/files/range-coder-edge-case");
 }
 
 #[test]
