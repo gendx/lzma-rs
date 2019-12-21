@@ -67,7 +67,7 @@ fn decompress_short_header() {
     assert_eq!(
         format!(
             "{:?}",
-            lzma_rs::lzma_decompress(&mut "".as_bytes(), &mut decomp).unwrap_err()
+            lzma_rs::lzma_decompress(&mut (b"" as &[u8]), &mut decomp).unwrap_err()
         ),
         String::from("LZMAError(\"LZMA header too short: failed to fill whole buffer\")")
     )

@@ -36,7 +36,7 @@ where
     #[inline]
     fn normalize(&mut self) -> io::Result<()> {
         trace!("  {{ range: {:08x}, code: {:08x} }}", self.range, self.code);
-        if self.range < 0x1000000 {
+        if self.range < 0x0100_0000 {
             self.range <<= 8;
             self.code = (self.code << 8) ^ (self.stream.read_u8()? as u32);
 
@@ -171,12 +171,10 @@ impl LenDecoder {
     ) -> io::Result<usize> {
         if !rangecoder.decode_bit(&mut self.choice)? {
             Ok(self.low_coder[pos_state].parse(rangecoder)? as usize)
+        } else if !rangecoder.decode_bit(&mut self.choice2)? {
+            Ok(self.mid_coder[pos_state].parse(rangecoder)? as usize + 8)
         } else {
-            if !rangecoder.decode_bit(&mut self.choice2)? {
-                Ok(self.mid_coder[pos_state].parse(rangecoder)? as usize + 8)
-            } else {
-                Ok(self.high_coder.parse(rangecoder)? as usize + 16)
-            }
+            Ok(self.high_coder.parse(rangecoder)? as usize + 16)
         }
     }
 }

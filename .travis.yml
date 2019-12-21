@@ -26,7 +26,13 @@ branches:
     - trying.tmp
 before_script:
     - rustup component add rustfmt
+    - rustup component add clippy
 script:
     - cargo fmt -- --check
+    # Ideally we would run CLippy on all targets, but benchmarks depend on an
+    # unstable feature and only work on nightly.
+    #- cargo clippy --all-targets -- -D warnings
+    - cargo clippy -- -D warnings
+    - cargo clippy --tests -- -D warnings
     - cargo build --verbose
     - cargo test --verbose

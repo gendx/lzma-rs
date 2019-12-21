@@ -129,9 +129,9 @@ where
     }
 
     if !util::is_eof(input)? {
-        return Err(error::Error::XZError(format!(
-            "Unexpected data after last XZ block"
-        )));
+        return Err(error::Error::XZError(
+            "Unexpected data after last XZ block".to_string(),
+        ));
     }
     Ok(())
 }
@@ -193,9 +193,9 @@ where
         for _ in 0..padding_size {
             let byte = digested.read_u8()?;
             if byte != 0 {
-                return Err(error::Error::XZError(format!(
-                    "Invalid index padding, must be null bytes"
-                )));
+                return Err(error::Error::XZError(
+                    "Invalid index padding, must be null bytes".to_string(),
+                ));
             }
         }
     }
@@ -314,9 +314,9 @@ where
     for _ in 0..padding_size {
         let byte = count_input.read_u8()?;
         if byte != 0 {
-            return Err(error::Error::XZError(format!(
-                "Invalid block padding, must be null bytes"
-            )));
+            return Err(error::Error::XZError(
+                "Invalid block padding, must be null bytes".to_string(),
+            ));
         }
     }
     check_checksum(count_input, tmpbuf.as_slice(), check_method)?;
@@ -463,9 +463,9 @@ where
     }
 
     if !util::flush_zero_padding(input)? {
-        return Err(error::Error::XZError(format!(
-            "Invalid block header padding, must be null bytes"
-        )));
+        return Err(error::Error::XZError(
+            "Invalid block header padding, must be null bytes".to_string(),
+        ));
     }
 
     Ok(BlockHeader {
@@ -488,7 +488,7 @@ where
         }
     }
 
-    Err(error::Error::XZError(format!(
-        "Invalid multi-byte encoding"
-    )))
+    Err(error::Error::XZError(
+        "Invalid multi-byte encoding".to_string(),
+    ))
 }
