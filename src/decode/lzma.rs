@@ -225,10 +225,8 @@ where
         rangecoder: &mut rangecoder::RangeDecoder<'a, R>,
     ) -> error::Result<()> {
         loop {
-            if let Some(_) = self.unpacked_size {
-                if rangecoder.is_finished_ok()? {
-                    break;
-                }
+            if self.unpacked_size.is_some() && rangecoder.is_finished_ok()? {
+                break;
             }
 
             let pos_state = self.output.len() & ((1 << self.pb) - 1);
@@ -244,12 +242,10 @@ where
 
                 self.state = if self.state < 4 {
                     0
+                } else if self.state < 10 {
+                    self.state - 3
                 } else {
-                    if self.state < 10 {
-                        self.state - 3
-                    } else {
-                        self.state - 6
-                    }
+                    self.state - 6
                 };
                 continue;
             }
@@ -275,12 +271,10 @@ where
                     let idx: usize;
                     if !rangecoder.decode_bit(&mut self.is_rep_g1[self.state])? {
                         idx = 1;
+                    } else if !rangecoder.decode_bit(&mut self.is_rep_g2[self.state])? {
+                        idx = 2;
                     } else {
-                        if !rangecoder.decode_bit(&mut self.is_rep_g2[self.state])? {
-                            idx = 2;
-                        } else {
-                            idx = 3;
-                        }
+                        idx = 3;
                     }
                     // Update LRU
                     let dist = self.rep[idx];

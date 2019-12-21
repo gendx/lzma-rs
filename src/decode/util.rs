@@ -9,7 +9,7 @@ pub fn read_tag<R: io::BufRead>(input: &mut R, tag: &[u8]) -> io::Result<bool> {
 
 pub fn is_eof<R: io::BufRead>(input: &mut R) -> io::Result<bool> {
     let buf = input.fill_buf()?;
-    Ok(buf.len() == 0)
+    Ok(buf.is_empty())
 }
 
 pub fn discard<R: io::Read>(input: &mut R, n: usize) -> io::Result<()> {

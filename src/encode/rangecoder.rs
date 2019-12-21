@@ -59,7 +59,7 @@ where
     }
 
     fn normalize(&mut self) -> io::Result<()> {
-        while self.range < 0x1000000 {
+        while self.range < 0x0100_0000 {
             debug!(
                 "+ {{ range: {:08x}, low: {:010x}, cache: {:02x}, {} }}",
                 self.range, self.low, self.cache, self.cachesz

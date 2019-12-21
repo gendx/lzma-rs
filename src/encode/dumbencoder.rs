@@ -22,7 +22,7 @@ where
     W: io::Write,
 {
     pub fn from_stream(stream: &'a mut W, options: &Options) -> io::Result<Self> {
-        let dict_size = 0x800000;
+        let dict_size = 0x0080_0000;
 
         // Properties
         let props = (LC + 9 * (LP + 5 * PB)) as u8;
