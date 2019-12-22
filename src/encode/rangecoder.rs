@@ -95,12 +95,126 @@ where
 
         self.normalize()
     }
+
+    #[cfg(test)]
+    fn encode_bit_tree(
+        &mut self,
+        num_bits: usize,
+        probs: &mut [u16],
+        value: u32,
+    ) -> io::Result<()> {
+        debug_assert!(value.leading_zeros() as usize + num_bits >= 32);
+        let mut tmp: usize = 1;
+        for i in 0..num_bits {
+            let bit = ((value >> (num_bits - i - 1)) & 1) != 0;
+            self.encode_bit(&mut probs[tmp], bit)?;
+            tmp = (tmp << 1) ^ (bit as usize);
+        }
+        Ok(())
+    }
+
+    #[cfg(test)]
+    pub fn encode_reverse_bit_tree(
+        &mut self,
+        num_bits: usize,
+        probs: &mut [u16],
+        offset: usize,
+        mut value: u32,
+    ) -> io::Result<()> {
+        debug_assert!(value.leading_zeros() as usize + num_bits >= 32);
+        let mut tmp: usize = 1;
+        for _ in 0..num_bits {
+            let bit = (value & 1) != 0;
+            value >>= 1;
+            self.encode_bit(&mut probs[offset + tmp], bit)?;
+            tmp = (tmp << 1) ^ (bit as usize);
+        }
+        Ok(())
+    }
+}
+
+// TODO: parametrize by constant and use [u16; 1 << num_bits] as soon as Rust supports this
+#[cfg(test)]
+#[derive(Clone)]
+pub struct BitTree {
+    num_bits: usize,
+    probs: Vec<u16>,
+}
+
+#[cfg(test)]
+impl BitTree {
+    pub fn new(num_bits: usize) -> Self {
+        BitTree {
+            num_bits,
+            probs: vec![0x400; 1 << num_bits],
+        }
+    }
+
+    pub fn encode<W: io::Write>(
+        &mut self,
+        rangecoder: &mut RangeEncoder<W>,
+        value: u32,
+    ) -> io::Result<()> {
+        rangecoder.encode_bit_tree(self.num_bits, self.probs.as_mut_slice(), value)
+    }
+
+    pub fn encode_reverse<W: io::Write>(
+        &mut self,
+        rangecoder: &mut RangeEncoder<W>,
+        value: u32,
+    ) -> io::Result<()> {
+        rangecoder.encode_reverse_bit_tree(self.num_bits, self.probs.as_mut_slice(), 0, value)
+    }
+}
+
+#[cfg(test)]
+pub struct LenEncoder {
+    choice: u16,
+    choice2: u16,
+    low_coder: Vec<BitTree>,
+    mid_coder: Vec<BitTree>,
+    high_coder: BitTree,
+}
+
+#[cfg(test)]
+impl LenEncoder {
+    pub fn new() -> Self {
+        LenEncoder {
+            choice: 0x400,
+            choice2: 0x400,
+            low_coder: vec![BitTree::new(3); 16],
+            mid_coder: vec![BitTree::new(3); 16],
+            high_coder: BitTree::new(8),
+        }
+    }
+
+    pub fn encode<W: io::Write>(
+        &mut self,
+        rangecoder: &mut RangeEncoder<W>,
+        pos_state: usize,
+        value: u32,
+    ) -> io::Result<()> {
+        let is_low: bool = value < 8;
+        rangecoder.encode_bit(&mut self.choice, !is_low)?;
+        if is_low {
+            return self.low_coder[pos_state].encode(rangecoder, value);
+        }
+
+        let is_middle: bool = value < 16;
+        rangecoder.encode_bit(&mut self.choice2, !is_middle)?;
+        if is_middle {
+            return self.mid_coder[pos_state].encode(rangecoder, value - 8);
+        }
+
+        self.high_coder.encode(rangecoder, value - 16)
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::decode::rangecoder::RangeDecoder;
+    use crate::decode::rangecoder::{LenDecoder, RangeDecoder};
+    use crate::{decode, encode};
     use std::io::BufReader;
 
     fn encode_decode(prob_init: u16, bits: &[bool]) {
@@ -130,5 +244,127 @@ mod test {
     #[test]
     fn test_encode_decode_ones() {
         encode_decode(0x400, &[true; 10000]);
+    }
+
+    fn encode_decode_bittree(num_bits: usize, values: &[u32]) {
+        let mut buf: Vec<u8> = Vec::new();
+
+        let mut encoder = RangeEncoder::new(&mut buf);
+        let mut tree = encode::rangecoder::BitTree::new(num_bits);
+        for &v in values {
+            tree.encode(&mut encoder, v).unwrap();
+        }
+        encoder.finish().unwrap();
+
+        let mut bufread = BufReader::new(buf.as_slice());
+        let mut decoder = RangeDecoder::new(&mut bufread).unwrap();
+        let mut tree = decode::rangecoder::BitTree::new(num_bits);
+        for &v in values {
+            assert_eq!(tree.parse(&mut decoder).unwrap(), v);
+        }
+        assert!(decoder.is_finished_ok().unwrap());
+    }
+
+    #[test]
+    fn test_encode_decode_bittree_zeros() {
+        for num_bits in 0..16 {
+            encode_decode_bittree(num_bits, &[0; 10000]);
+        }
+    }
+
+    #[test]
+    fn test_encode_decode_bittree_ones() {
+        for num_bits in 0..16 {
+            encode_decode_bittree(num_bits, &[(1 << num_bits) - 1; 10000]);
+        }
+    }
+
+    #[test]
+    fn test_encode_decode_bittree_all() {
+        for num_bits in 0..16 {
+            let max = 1 << num_bits;
+            let values: Vec<u32> = (0..max).collect();
+            encode_decode_bittree(num_bits, &values);
+        }
+    }
+
+    fn encode_decode_reverse_bittree(num_bits: usize, values: &[u32]) {
+        let mut buf: Vec<u8> = Vec::new();
+
+        let mut encoder = RangeEncoder::new(&mut buf);
+        let mut tree = encode::rangecoder::BitTree::new(num_bits);
+        for &v in values {
+            tree.encode_reverse(&mut encoder, v).unwrap();
+        }
+        encoder.finish().unwrap();
+
+        let mut bufread = BufReader::new(buf.as_slice());
+        let mut decoder = RangeDecoder::new(&mut bufread).unwrap();
+        let mut tree = decode::rangecoder::BitTree::new(num_bits);
+        for &v in values {
+            assert_eq!(tree.parse_reverse(&mut decoder).unwrap(), v);
+        }
+        assert!(decoder.is_finished_ok().unwrap());
+    }
+
+    #[test]
+    fn test_encode_decode_reverse_bittree_zeros() {
+        for num_bits in 0..16 {
+            encode_decode_reverse_bittree(num_bits, &[0; 10000]);
+        }
+    }
+
+    #[test]
+    fn test_encode_decode_reverse_bittree_ones() {
+        for num_bits in 0..16 {
+            encode_decode_reverse_bittree(num_bits, &[(1 << num_bits) - 1; 10000]);
+        }
+    }
+
+    #[test]
+    fn test_encode_decode_reverse_bittree_all() {
+        for num_bits in 0..16 {
+            let max = 1 << num_bits;
+            let values: Vec<u32> = (0..max).collect();
+            encode_decode_reverse_bittree(num_bits, &values);
+        }
+    }
+
+    fn encode_decode_length(pos_state: usize, values: &[u32]) {
+        let mut buf: Vec<u8> = Vec::new();
+
+        let mut encoder = RangeEncoder::new(&mut buf);
+        let mut len_encoder = LenEncoder::new();
+        for &v in values {
+            len_encoder.encode(&mut encoder, pos_state, v).unwrap();
+        }
+        encoder.finish().unwrap();
+
+        let mut bufread = BufReader::new(buf.as_slice());
+        let mut decoder = RangeDecoder::new(&mut bufread).unwrap();
+        let mut len_decoder = LenDecoder::new();
+        for &v in values {
+            assert_eq!(
+                len_decoder.decode(&mut decoder, pos_state).unwrap(),
+                v as usize
+            );
+        }
+        assert!(decoder.is_finished_ok().unwrap());
+    }
+
+    #[test]
+    fn test_encode_decode_length_zeros() {
+        for pos_state in 0..16 {
+            encode_decode_length(pos_state, &[0; 10000]);
+        }
+    }
+
+    #[test]
+    fn test_encode_decode_length_all() {
+        for pos_state in 0..16 {
+            let max = (1 << 8) + 16;
+            let values: Vec<u32> = (0..max).collect();
+            encode_decode_length(pos_state, &values);
+        }
     }
 }
