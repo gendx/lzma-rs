@@ -86,8 +86,7 @@ where
 
     fn finish(&mut self, input_len: usize) -> io::Result<()> {
         match self.unpacked_size {
-            UnpackedSize::SkipWritingToHeader => {}
-            UnpackedSize::WriteToHeader(Some(_)) => {}
+            UnpackedSize::SkipWritingToHeader | UnpackedSize::WriteToHeader(Some(_)) => {}
             UnpackedSize::WriteToHeader(None) => {
                 // Write end-of-stream marker
                 let pos_state = input_len & 3;

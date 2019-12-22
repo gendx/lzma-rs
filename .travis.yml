@@ -32,7 +32,7 @@ script:
     # Ideally we would run CLippy on all targets, but benchmarks depend on an
     # unstable feature and only work on nightly.
     #- cargo clippy --all-targets -- -D warnings
-    - cargo clippy -- -D warnings
-    - cargo clippy --tests -- -D warnings
+    - cargo clippy -- -D warnings -W clippy::match-same-arms
+    - cargo clippy --tests -- -D warnings -W clippy::match-same-arms
     - cargo build --verbose
     - cargo test --verbose

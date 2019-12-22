@@ -68,12 +68,7 @@ where
             reset_state = false;
             reset_props = false;
         }
-        1 => {
-            reset_dict = false;
-            reset_state = true;
-            reset_props = false;
-        }
-        2 => {
+        1 | 2 => {
             reset_dict = false;
             reset_state = true;
             reset_props = false;
