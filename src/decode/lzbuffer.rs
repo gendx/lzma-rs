@@ -139,11 +139,22 @@ where
         info!("Dict size in LZ buffer: {}", dict_size);
         Self {
             stream,
-            buf: vec![0; dict_size],
+            buf: Vec::new(),
             dict_size,
             cursor: 0,
             len: 0,
         }
+    }
+
+    fn get(&self, index: usize) -> u8 {
+        *self.buf.get(index).unwrap_or(&0)
+    }
+
+    fn get_mut(&mut self, index: usize) -> &mut u8 {
+        if self.buf.len() < index + 1 {
+            self.buf.resize(index + 1, 0);
+        }
+        self.buf.get_mut(index).unwrap()
     }
 }
 
@@ -160,7 +171,7 @@ where
         if self.len == 0 {
             lit
         } else {
-            self.buf[(self.dict_size + self.cursor - 1) % self.dict_size]
+            self.get((self.dict_size + self.cursor - 1) % self.dict_size)
         }
     }
 
@@ -180,12 +191,12 @@ where
         }
 
         let offset = (self.dict_size + self.cursor - dist) % self.dict_size;
-        Ok(self.buf[offset])
+        Ok(self.get(offset))
     }
 
     // Append a literal
     fn append_literal(&mut self, lit: u8) -> io::Result<()> {
-        self.buf[self.cursor] = lit;
+        *self.get_mut(self.cursor) = lit;
         self.cursor += 1;
         self.len += 1;
 
@@ -216,7 +227,7 @@ where
 
         let mut offset = (self.dict_size + self.cursor - dist) % self.dict_size;
         for _ in 0..len {
-            let x = self.buf[offset];
+            let x = self.get(offset);
             self.append_literal(x)?;
             offset += 1;
             if offset == self.dict_size {
