@@ -138,7 +138,7 @@ where
     pub fn from_stream(stream: &'a mut W, dict_size: usize) -> Self {
         info!("Dict size in LZ buffer: {}", dict_size);
         Self {
-            stream: stream,
+            stream,
             buf: Vec::new(),
             dict_size,
             cursor: 0,
@@ -147,14 +147,13 @@ where
     }
 
     fn get(&self, index: usize) -> u8 {
-        match self.buf.get(index) {
-            Some(x) => *x,
-            None => 0,
-        }
+        *self.buf.get(index).unwrap_or(&0)
     }
 
     fn get_mut(&mut self, index: usize) -> &mut u8 {
-        self.buf.resize(index + 1, 0);
+        if self.buf.len() < index + 1 {
+            self.buf.resize(index + 1, 0);
+        }
         self.buf.get_mut(index).unwrap()
     }
 }
