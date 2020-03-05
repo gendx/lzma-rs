@@ -43,6 +43,15 @@ fn round_trip_file(filename: &str) {
         .read_to_end(&mut x)
         .unwrap();
     round_trip(x.as_slice());
+
+    // Do another round trip, but this time also write it to the header
+    let encode_options = lzma_rs::compress::Options {
+        unpacked_size: lzma_rs::compress::UnpackedSize::WriteToHeader(Some(x.len() as u64)),
+    };
+    let decode_options = lzma_rs::decompress::Options {
+        unpacked_size: lzma_rs::decompress::UnpackedSize::ReadFromHeader,
+    };
+    round_trip_with_options(x.as_slice(), &encode_options, &decode_options);
 }
 
 fn decomp_big_file(compfile: &str, plainfile: &str) {

@@ -225,7 +225,11 @@ where
         rangecoder: &mut rangecoder::RangeDecoder<'a, R>,
     ) -> error::Result<()> {
         loop {
-            if self.unpacked_size.is_some() && rangecoder.is_finished_ok()? {
+            if let Some(unpacked_size) = self.unpacked_size {
+                if self.output.len() as u64 >= unpacked_size {
+                    break;
+                }
+            } else if rangecoder.is_finished_ok()? {
                 break;
             }
 
