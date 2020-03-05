@@ -150,11 +150,11 @@ where
         *self.buf.get(index).unwrap_or(&0)
     }
 
-    fn get_mut(&mut self, index: usize) -> &mut u8 {
+    fn set(&mut self, index: usize, value: u8) {
         if self.buf.len() < index + 1 {
             self.buf.resize(index + 1, 0);
         }
-        self.buf.get_mut(index).unwrap()
+        self.buf[index] = value;
     }
 }
 
@@ -196,7 +196,7 @@ where
 
     // Append a literal
     fn append_literal(&mut self, lit: u8) -> io::Result<()> {
-        *self.get_mut(self.cursor) = lit;
+        self.set(self.cursor, lit);
         self.cursor += 1;
         self.len += 1;
 
