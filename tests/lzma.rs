@@ -1,13 +1,16 @@
+#[cfg(feature = "enable_logging")]
 extern crate env_logger;
+#[macro_use]
 extern crate lzma_rs;
+#[cfg(feature = "enable_logging")]
 #[macro_use]
 extern crate log;
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::lzma_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
-    info!("Compressed {} -> {} bytes", x.len(), compressed.len());
-    debug!("Compressed content: {:?}", compressed);
+    lzma_info!("Compressed {} -> {} bytes", x.len(), compressed.len());
+    lzma_debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
@@ -26,8 +29,8 @@ fn round_trip_with_options(
         encode_options,
     )
     .unwrap();
-    info!("Compressed {} -> {} bytes", x.len(), compressed.len());
-    debug!("Compressed content: {:?}", compressed);
+    lzma_info!("Compressed {} -> {} bytes", x.len(), compressed.len());
+    lzma_debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::lzma_decompress_with_options(&mut bf, &mut decomp, decode_options).unwrap();
@@ -70,6 +73,7 @@ fn decomp_big_file(compfile: &str, plainfile: &str) {
 
 #[test]
 fn decompress_short_header() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     let mut decomp: Vec<u8> = Vec::new();
     // TODO: compare io::Errors?
@@ -84,6 +88,7 @@ fn decompress_short_header() {
 
 #[test]
 fn round_trip_basics() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     round_trip(b"");
     // Note: we use vec! to avoid storing the slice in the binary
@@ -93,12 +98,14 @@ fn round_trip_basics() {
 
 #[test]
 fn round_trip_hello() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     round_trip(b"Hello world");
 }
 
 #[test]
 fn round_trip_files() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     round_trip_file("tests/files/foo.txt");
     round_trip_file("tests/files/range-coder-edge-case");
@@ -106,6 +113,7 @@ fn round_trip_files() {
 
 #[test]
 fn big_file() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     decomp_big_file("tests/files/foo.txt.lzma", "tests/files/foo.txt");
     decomp_big_file("tests/files/hugedict.txt.lzma", "tests/files/foo.txt");
@@ -117,6 +125,7 @@ fn big_file() {
 
 #[test]
 fn decompress_empty_world() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     let mut x: &[u8] = b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x83\xff\
                          \xfb\xff\xff\xc0\x00\x00\x00";
@@ -127,6 +136,7 @@ fn decompress_empty_world() {
 
 #[test]
 fn decompress_hello_world() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     let mut x: &[u8] = b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
                          \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
@@ -139,6 +149,7 @@ fn decompress_hello_world() {
 #[test]
 fn decompress_huge_dict() {
     // Hello world with a dictionary of size 0x7F7F7F7F
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     let mut x: &[u8] = b"\x5d\x7f\x7f\x7f\x7f\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
                          \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\

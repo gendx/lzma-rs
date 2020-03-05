@@ -1,7 +1,11 @@
 extern crate byteorder;
+#[cfg(feature = "enable_logging")]
 #[macro_use]
 extern crate log;
 extern crate crc;
+
+#[macro_use]
+mod macros;
 
 mod decode;
 mod encode;

@@ -100,9 +100,10 @@ where
         lzma2::encode_stream(&mut count_input, &mut count_output)?;
         (count_output.count(), count_input.count())
     };
-    info!(
+    lzma_info!(
         "Unpadded size = {}, unpacked_size = {}",
-        unpadded_size, unpacked_size
+        unpadded_size,
+        unpacked_size
     );
 
     let padding_size = ((unpadded_size ^ 0x03) + 1) & 0x03;

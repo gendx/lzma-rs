@@ -55,7 +55,7 @@ where
         digested.read_u16::<BigEndian>()?
     };
     let check_method = get_check_method(flags)?;
-    info!("XZ check method: {:?}", check_method);
+    lzma_info!("XZ check method: {:?}", check_method);
 
     let digest_crc32 = digest.sum32();
 
@@ -71,10 +71,10 @@ where
     let index_size = loop {
         let mut count_input = util::CountBufRead::new(input);
         let header_size = count_input.read_u8()?;
-        info!("XZ block header_size byte: 0x{:02x}", header_size);
+        lzma_info!("XZ block header_size byte: 0x{:02x}", header_size);
 
         if header_size == 0 {
-            info!("XZ records: {:?}", records);
+            lzma_info!("XZ records: {:?}", records);
             check_index(&mut count_input, &records)?;
             let index_size = count_input.count();
             break index_size;
@@ -160,7 +160,7 @@ where
         }
 
         for (i, record) in records.iter().enumerate() {
-            info!("XZ index checking record {}: {:?}", i, record);
+            lzma_info!("XZ index checking record {}: {:?}", i, record);
 
             let unpadded_size = get_multibyte(&mut digested)?;
             if unpadded_size != record.unpadded_size as u64 {
@@ -183,9 +183,10 @@ where
     // TODO: create padding parser function
     let count = count_input.count();
     let padding_size = ((count ^ 0x03) + 1) & 0x03;
-    info!(
+    lzma_info!(
         "XZ index: {} byte(s) read, {} byte(s) of padding",
-        count, padding_size
+        count,
+        padding_size
     );
 
     {
@@ -201,7 +202,7 @@ where
     }
 
     let digest_crc32 = digest.sum32();
-    info!("XZ index checking digest 0x{:08x}", digest_crc32);
+    lzma_info!("XZ index checking digest 0x{:08x}", digest_crc32);
 
     let crc32 = count_input.read_u32::<LittleEndian>()?;
     if crc32 != digest_crc32 {
@@ -294,7 +295,7 @@ where
     }
 
     let unpacked_size = tmpbuf.len();
-    info!("XZ block decompressed to {} byte(s)", tmpbuf.len());
+    lzma_info!("XZ block decompressed to {} byte(s)", tmpbuf.len());
 
     if let Some(expected_unpacked_size) = block_header.unpacked_size {
         if (unpacked_size as u64) != expected_unpacked_size {
@@ -307,9 +308,10 @@ where
 
     let count = count_input.count();
     let padding_size = ((count ^ 0x03) + 1) & 0x03;
-    info!(
+    lzma_info!(
         "XZ block: {} byte(s) read, {} byte(s) of padding",
-        count, padding_size
+        count,
+        padding_size
     );
     for _ in 0..padding_size {
         let byte = count_input.read_u8()?;
@@ -395,7 +397,7 @@ where
     let has_packed_size = flags & 0x40 != 0;
     let has_unpacked_size = flags & 0x80 != 0;
 
-    info!(
+    lzma_info!(
         "XZ block header: {{ header_size: {}, flags: {}, num_filters: {}, has_packed_size: {}, has_unpacked_size: {} }}",
         header_size,
         flags,
@@ -423,9 +425,10 @@ where
         None
     };
 
-    info!(
+    lzma_info!(
         "XZ block header: {{ packed_size: {:?}, unpacked_size: {:?} }}",
-        packed_size, unpacked_size
+        packed_size,
+        unpacked_size
     );
 
     let mut filters: Vec<Filter> = vec![];
@@ -433,9 +436,10 @@ where
         let filter_id = get_filter_id(get_multibyte(input)?)?;
         let size_of_properties = get_multibyte(input)?;
 
-        info!(
+        lzma_info!(
             "XZ filter: {{ filter_id: {:?}, size_of_properties: {} }}",
-            filter_id, size_of_properties
+            filter_id,
+            size_of_properties
         );
 
         // Early abort to avoid allocating a large vector
@@ -454,7 +458,7 @@ where
             )))
         })?;
 
-        info!("XZ filter properties: {:?}", buf);
+        lzma_info!("XZ filter properties: {:?}", buf);
 
         filters.push(Filter {
             filter_id,
