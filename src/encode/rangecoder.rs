@@ -16,6 +16,7 @@ impl<'a, W> RangeEncoder<'a, W>
 where
     W: io::Write,
 {
+    #[allow(clippy::let_and_return)]
     pub fn new(stream: &'a mut W) -> Self {
         let enc = Self {
             stream,
