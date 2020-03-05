@@ -38,5 +38,3 @@ script:
     - cargo build --verbose --features enable_logging
     - cargo test --verbose
     - cargo test --verbose --features enable_logging
-    - cargo bench --verbose
-    - cargo bench --verbose --features enable_logging
