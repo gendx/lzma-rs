@@ -35,4 +35,6 @@ script:
     - cargo clippy -- -D warnings -W clippy::match-same-arms
     - cargo clippy --tests -- -D warnings -W clippy::match-same-arms
     - cargo build --verbose
+    - cargo build --verbose --features enable_logging
     - cargo test --verbose
+    - cargo test --verbose --features enable_logging

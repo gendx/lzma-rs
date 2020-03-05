@@ -1,14 +1,16 @@
+#[cfg(feature = "enable_logging")]
 extern crate env_logger;
+#[macro_use]
 extern crate lzma_rs;
-
+#[cfg(feature = "enable_logging")]
 #[macro_use]
 extern crate log;
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::xz_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
-    info!("Compressed {} -> {} bytes", x.len(), compressed.len());
-    debug!("Compressed content: {:?}", compressed);
+    lzma_info!("Compressed {} -> {} bytes", x.len(), compressed.len());
+    lzma_debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::xz_decompress(&mut bf, &mut decomp).unwrap();
@@ -28,6 +30,7 @@ fn round_trip_file(filename: &str) {
 
 #[test]
 fn round_trip_basics() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     round_trip(b"");
     // Note: we use vec! to avoid storing the slice in the binary
@@ -37,12 +40,14 @@ fn round_trip_basics() {
 
 #[test]
 fn round_trip_hello() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     round_trip(b"Hello world");
 }
 
 #[test]
 fn round_trip_files() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     round_trip_file("tests/files/foo.txt");
 }
@@ -63,12 +68,14 @@ fn decomp_big_file(compfile: &str, plainfile: &str) {
 
 #[test]
 fn big_file() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     decomp_big_file("tests/files/foo.txt.xz", "tests/files/foo.txt");
 }
 
 #[test]
 fn decompress_empty_world() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     let mut x: &[u8] = b"\xfd\x37\x7a\x58\x5a\x00\x00\x04\xe6\xd6\xb4\x46\x00\x00\x00\x00\
                          \x1c\xdf\x44\x21\x1f\xb6\xf3\x7d\x01\x00\x00\x00\x00\x04\x59\x5a\
@@ -80,6 +87,7 @@ fn decompress_empty_world() {
 
 #[test]
 fn decompress_hello_world() {
+    #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     let mut x: &[u8] = b"\xfd\x37\x7a\x58\x5a\x00\x00\x04\xe6\xd6\xb4\x46\x02\x00\x21\x01\
                          \x16\x00\x00\x00\x74\x2f\xe5\xa3\x01\x00\x0b\x48\x65\x6c\x6c\x6f\

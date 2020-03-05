@@ -24,7 +24,7 @@ where
         };
         let _ = dec.stream.read_u8()?;
         dec.code = dec.stream.read_u32::<BigEndian>()?;
-        debug!("0 {{ range: {:08x}, code: {:08x} }}", dec.range, dec.code);
+        lzma_debug!("0 {{ range: {:08x}, code: {:08x} }}", dec.range, dec.code);
         Ok(dec)
     }
 
@@ -35,12 +35,12 @@ where
 
     #[inline]
     fn normalize(&mut self) -> io::Result<()> {
-        trace!("  {{ range: {:08x}, code: {:08x} }}", self.range, self.code);
+        lzma_trace!("  {{ range: {:08x}, code: {:08x} }}", self.range, self.code);
         if self.range < 0x0100_0000 {
             self.range <<= 8;
             self.code = (self.code << 8) ^ (self.stream.read_u8()? as u32);
 
-            debug!("+ {{ range: {:08x}, code: {:08x} }}", self.range, self.code);
+            lzma_debug!("+ {{ range: {:08x}, code: {:08x} }}", self.range, self.code);
         }
         Ok(())
     }
@@ -70,7 +70,7 @@ where
     pub fn decode_bit(&mut self, prob: &mut u16) -> io::Result<bool> {
         let bound: u32 = (self.range >> 11) * (*prob as u32);
 
-        trace!(
+        lzma_trace!(
             " bound: {:08x}, prob: {:04x}, bit: {}",
             bound,
             prob,

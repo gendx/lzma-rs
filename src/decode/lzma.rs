@@ -43,7 +43,7 @@ impl LZMAParams {
         let lp: u32 = pb % 5;
         pb /= 5;
 
-        info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
+        lzma_info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
 
         // Dictionary
         let dict_size_provided = input.read_u32::<LittleEndian>().or_else(|e| {
@@ -58,7 +58,7 @@ impl LZMAParams {
             dict_size_provided
         };
 
-        info!("Dict size: {}", dict_size);
+        lzma_info!("Dict size: {}", dict_size);
 
         // Unpacked size
         let unpacked_size: Option<u64> = match options.unpacked_size {
@@ -83,7 +83,7 @@ impl LZMAParams {
             UnpackedSize::UseProvided(x) => x,
         };
 
-        info!("Unpacked size: {:?}", unpacked_size);
+        lzma_info!("Unpacked size: {:?}", unpacked_size);
 
         let params = LZMAParams {
             lc,
@@ -241,7 +241,7 @@ where
                 &mut self.is_match[(self.state << 4) + pos_state],
             )? {
                 let byte: u8 = self.decode_literal(rangecoder)?;
-                debug!("Literal: {}", byte);
+                lzma_debug!("Literal: {}", byte);
                 self.output.append_literal(byte)?;
 
                 self.state = if self.state < 4 {

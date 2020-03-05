@@ -92,7 +92,7 @@ where
 
     // Fetch an LZ sequence (length, distance) from inside the buffer
     fn append_lz(&mut self, len: usize, dist: usize) -> error::Result<()> {
-        debug!("LZ {{ len: {}, dist: {} }}", len, dist);
+        lzma_debug!("LZ {{ len: {}, dist: {} }}", len, dist);
         let buf_len = self.buf.len();
         if dist > buf_len {
             return Err(error::Error::LZMAError(format!(
@@ -136,7 +136,7 @@ where
     W: io::Write,
 {
     pub fn from_stream(stream: &'a mut W, dict_size: usize) -> Self {
-        info!("Dict size in LZ buffer: {}", dict_size);
+        lzma_info!("Dict size in LZ buffer: {}", dict_size);
         Self {
             stream,
             buf: Vec::new(),
@@ -211,7 +211,7 @@ where
 
     // Fetch an LZ sequence (length, distance) from inside the buffer
     fn append_lz(&mut self, len: usize, dist: usize) -> error::Result<()> {
-        debug!("LZ {{ len: {}, dist: {} }}", len, dist);
+        lzma_debug!("LZ {{ len: {}, dist: {} }}", len, dist);
         if dist > self.dict_size {
             return Err(error::Error::LZMAError(format!(
                 "LZ distance {} is beyond dictionary size {}",

@@ -26,11 +26,11 @@ where
 
         // Properties
         let props = (LC + 9 * (LP + 5 * PB)) as u8;
-        info!("Properties {{ lc: {}, lp: {}, pb: {} }}", LC, LP, PB);
+        lzma_info!("Properties {{ lc: {}, lp: {}, pb: {} }}", LC, LP, PB);
         stream.write_u8(props)?;
 
         // Dictionary
-        info!("Dict size: {}", dict_size);
+        lzma_info!("Dict size: {}", dict_size);
         stream.write_u32::<LittleEndian>(dict_size)?;
 
         // Unpacked size
@@ -38,11 +38,11 @@ where
             UnpackedSize::WriteToHeader(unpacked_size) => {
                 let value: u64 = match unpacked_size {
                     None => {
-                        info!("Unpacked size: unknown");
+                        lzma_info!("Unpacked size: unknown");
                         0xFFFF_FFFF_FFFF_FFFF
                     }
                     Some(x) => {
-                        info!("Unpacked size: {}", x);
+                        lzma_info!("Unpacked size: {}", x);
                         *x
                     }
                 };

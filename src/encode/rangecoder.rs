@@ -16,6 +16,7 @@ impl<'a, W> RangeEncoder<'a, W>
 where
     W: io::Write,
 {
+    #[allow(clippy::let_and_return)]
     pub fn new(stream: &'a mut W) -> Self {
         let enc = Self {
             stream,
@@ -24,7 +25,7 @@ where
             cache: 0,
             cachesz: 1,
         };
-        debug!("0 {{ range: {:08x}, low: {:010x} }}", enc.range, enc.low);
+        lzma_debug!("0 {{ range: {:08x}, low: {:010x} }}", enc.range, enc.low);
         enc
     }
 
@@ -34,7 +35,7 @@ where
             loop {
                 let byte = tmp.wrapping_add((self.low >> 32) as u8);
                 self.stream.write_u8(byte)?;
-                debug!("> byte: {:02x}", byte);
+                lzma_debug!("> byte: {:02x}", byte);
                 tmp = 0xFF;
                 self.cachesz -= 1;
                 if self.cachesz == 0 {
@@ -53,31 +54,37 @@ where
         for _ in 0..5 {
             self.write_low()?;
 
-            debug!("$ {{ range: {:08x}, low: {:010x} }}", self.range, self.low);
+            lzma_debug!("$ {{ range: {:08x}, low: {:010x} }}", self.range, self.low);
         }
         Ok(())
     }
 
     fn normalize(&mut self) -> io::Result<()> {
         while self.range < 0x0100_0000 {
-            debug!(
+            lzma_debug!(
                 "+ {{ range: {:08x}, low: {:010x}, cache: {:02x}, {} }}",
-                self.range, self.low, self.cache, self.cachesz
+                self.range,
+                self.low,
+                self.cache,
+                self.cachesz
             );
             self.range <<= 8;
             self.write_low()?;
-            debug!(
+            lzma_debug!(
                 "* {{ range: {:08x}, low: {:010x}, cache: {:02x}, {} }}",
-                self.range, self.low, self.cache, self.cachesz
+                self.range,
+                self.low,
+                self.cache,
+                self.cachesz
             );
         }
-        trace!("  {{ range: {:08x}, low: {:010x} }}", self.range, self.low);
+        lzma_trace!("  {{ range: {:08x}, low: {:010x} }}", self.range, self.low);
         Ok(())
     }
 
     pub fn encode_bit(&mut self, prob: &mut u16, bit: bool) -> io::Result<()> {
         let bound: u32 = (self.range >> 11) * (*prob as u32);
-        trace!(
+        lzma_trace!(
             "  bound: {:08x}, prob: {:04x}, bit: {}",
             bound,
             prob,

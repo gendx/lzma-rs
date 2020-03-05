@@ -23,10 +23,10 @@ where
             )))
         })?;
 
-        info!("LZMA2 status: {}", status);
+        lzma_info!("LZMA2 status: {}", status);
 
         if status == 0 {
-            info!("LZMA2 end of input");
+            lzma_info!("LZMA2 end of input");
             break;
         } else if status == 1 {
             // uncompressed reset dict
@@ -97,7 +97,7 @@ where
     })?;
     let packed_size = (packed_size as u64) + 1;
 
-    info!(
+    lzma_info!(
         "LZMA2 compressed block {{ unpacked_size: {}, packed_size: {}, reset_dict: {}, reset_state: {}, reset_props: {} }}",
         unpacked_size,
         packed_size,
@@ -143,7 +143,7 @@ where
                 )));
             }
 
-            info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
+            lzma_info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
         } else {
             lc = decoder.lc;
             lp = decoder.lp;
@@ -182,9 +182,10 @@ where
     })?;
     let unpacked_size = (unpacked_size as usize) + 1;
 
-    info!(
+    lzma_info!(
         "LZMA2 uncompressed block {{ unpacked_size: {}, reset_dict: {} }}",
-        unpacked_size, reset_dict
+        unpacked_size,
+        reset_dict
     );
 
     if reset_dict {
