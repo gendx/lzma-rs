@@ -60,7 +60,9 @@ where
     let digest_crc32 = digest.sum32();
 
     let crc32 = input.read_u32::<LittleEndian>()?;
-    if crc32 != digest_crc32 {
+    // We ignore crc32 mismatches during fuzzing
+    // because fuzzers produce random data without a valid crc32
+    if crc32 != digest_crc32 && ! cfg!(fuzzing) {
         return Err(error::Error::XZError(format!(
             "Invalid index CRC32: expected 0x{:08x} but got 0x{:08x}",
             crc32, digest_crc32
@@ -321,7 +323,10 @@ where
             ));
         }
     }
-    check_checksum(count_input, tmpbuf.as_slice(), check_method)?;
+    let checksum_result = check_checksum(count_input, tmpbuf.as_slice(), check_method);
+    if ! cfg!(fuzzing) { // ignore checksum mismatch during fuzzing
+        checksum_result?;
+    }
 
     output.write_all(tmpbuf.as_slice())?;
     records.push(Record {
