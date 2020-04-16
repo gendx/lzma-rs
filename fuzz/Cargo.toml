@@ -8,6 +8,9 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
+[dependencies]
+xz2 = "0.1.6"
+
 [dependencies.lzma-rs]
 path = ".."
 [dependencies.libfuzzer-sys]
