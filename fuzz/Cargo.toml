@@ -46,4 +46,4 @@ path = "fuzz_targets/decompress_xz.rs"
 
 [[bin]]
 name = "compare_xz"
-path = "fuzz_targets/decompress_xz.rs"
+path = "fuzz_targets/compare_xz.rs"
