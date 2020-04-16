@@ -14,5 +14,5 @@ fn decode_lzma2(compressed: &[u8]) -> Result<Vec<u8>> {
 }
 
 fuzz_target!(|data: &[u8]| {
-    let decomp = decode_lzma2(data);
+    let _decomp = decode_lzma2(data);
 });
