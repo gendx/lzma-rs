@@ -8,6 +8,9 @@ publish = false
 [package.metadata]
 cargo-fuzz = true
 
+[dependencies]
+xz2 = "0.1.6"
+
 [dependencies.lzma-rs]
 path = ".."
 [dependencies.libfuzzer-sys]
@@ -28,3 +31,19 @@ path = "fuzz_targets/roundtrip_lzma2.rs"
 [[bin]]
 name = "roundtrip_xz"
 path = "fuzz_targets/roundtrip_xz.rs"
+
+[[bin]]
+name = "decompress_lzma"
+path = "fuzz_targets/decompress_lzma.rs"
+
+[[bin]]
+name = "decompress_lzma2"
+path = "fuzz_targets/decompress_lzma2.rs"
+
+[[bin]]
+name = "decompress_xz"
+path = "fuzz_targets/decompress_xz.rs"
+
+[[bin]]
+name = "compare_xz"
+path = "fuzz_targets/compare_xz.rs"
