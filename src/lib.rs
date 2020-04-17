@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 extern crate byteorder;
 #[cfg(feature = "enable_logging")]
 #[macro_use]
