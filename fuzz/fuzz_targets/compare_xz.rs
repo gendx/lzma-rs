@@ -19,7 +19,7 @@ fn decode_xz_xz2(compressed: &[u8]) -> Result<Vec<u8>> {
     let bf = std::io::Cursor::new(compressed);
     let mut decomp: Vec<u8> = Vec::new();
     // create new XZ decompression stream with 8Gb memory limit and checksum verification disabled
-    let xz_stream = stream::Stream::new_stream_decoder(8589935000, stream::IGNORE_CHECK).expect("Failed to create stream");
+    let xz_stream = stream::Stream::new_stream_decoder(8*1024*1024*1024, stream::IGNORE_CHECK).expect("Failed to create stream");
     xz2::bufread::XzDecoder::new_stream(bf, xz_stream).read_to_end(&mut decomp)?;
     Ok(decomp)
 }
