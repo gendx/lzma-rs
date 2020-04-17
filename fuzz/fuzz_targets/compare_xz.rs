@@ -31,6 +31,6 @@ fuzz_target!(|data: &[u8]| {
         (Err(_), Err(_)) => (), // both failed, so behavior matches
         (Ok(_), Err(_)) => panic!("lzma-rs succeeded but xz2 failed"),
         (Err(_), Ok(_)) => panic!("xz2 succeeded but lzma-rs failed"),
-        (Ok(a), Ok(b)) => assert!(a.as_slice() == b.as_slice())
+        (Ok(a), Ok(b)) => assert!(a == b)
     }
 });
