@@ -47,3 +47,11 @@ path = "fuzz_targets/decompress_xz.rs"
 [[bin]]
 name = "compare_xz"
 path = "fuzz_targets/compare_xz.rs"
+
+[[bin]]
+name = "interop_xz_decode"
+path = "fuzz_targets/interop_xz_decode.rs"
+
+[[bin]]
+name = "interop_xz_encode"
+path = "fuzz_targets/interop_xz_encode.rs"
