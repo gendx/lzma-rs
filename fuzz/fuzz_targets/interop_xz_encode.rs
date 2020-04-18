@@ -25,5 +25,6 @@ fn decode_xz_xz2(compressed: &[u8]) -> Result<Vec<u8>> {
 
 fuzz_target!(|data: &[u8]| {
     let compressed = encode_xz_lzmars(data).expect("Compression failed");
-    decode_xz_xz2(&compressed).expect("liblzma failed to decompress what we've compressed");
+    let decoded = decode_xz_xz2(&compressed).expect("liblzma failed to decompress what we've compressed");
+    assert!(data == decoded.as_slice(), "Decompressed data is different from the original");
 });
