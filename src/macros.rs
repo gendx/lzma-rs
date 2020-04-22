@@ -2,7 +2,7 @@
 #[macro_export]
 macro_rules! lzma_trace {
     ($($arg:tt)+) => {
-        trace!($($arg)+);
+        log::trace!($($arg)+);
     }
 }
 
@@ -10,7 +10,7 @@ macro_rules! lzma_trace {
 #[macro_export]
 macro_rules! lzma_debug {
     ($($arg:tt)+) => {
-        debug!($($arg)+);
+        log::debug!($($arg)+);
     }
 }
 
@@ -18,7 +18,7 @@ macro_rules! lzma_debug {
 #[macro_export]
 macro_rules! lzma_info {
     ($($arg:tt)+) => {
-        info!($($arg)+);
+        log::info!($($arg)+);
     }
 }
 
