@@ -3,6 +3,7 @@
 [![Crate](https://img.shields.io/crates/v/lzma-rs.svg)](https://crates.io/crates/lzma-rs)
 [![Documentation](https://docs.rs/lzma-rs/badge.svg)](https://docs.rs/lzma-rs)
 [![Build Status](https://travis-ci.org/gendx/lzma-rs.svg?branch=master)](https://travis-ci.org/gendx/lzma-rs)
+[![Minimum rust 1.32](https://img.shields.io/badge/rust-1.32%2B-orange.svg)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1320-2019-01-17)
 
 This project is a decoder for LZMA and its variants written in pure Rust, with focus on clarity.
 It already supports LZMA, LZMA2 and a subset of the `.xz` file format.
