@@ -361,7 +361,11 @@ where
             }
         }
         // TODO
-        CheckMethod::SHA256 => unimplemented!(),
+        CheckMethod::SHA256 => {
+            return Err(error::Error::XZError(
+                "Unsupported SHA-256 checksum (not yet implemented)".to_string(),
+            ));
+        }
     }
     Ok(())
 }
