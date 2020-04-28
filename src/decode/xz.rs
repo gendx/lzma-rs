@@ -3,8 +3,8 @@
 use crate::decode::lzma2;
 use crate::decode::util;
 use crate::error;
-use crate::xz::{footer, header};
-use byteorder::{LittleEndian, ReadBytesExt};
+use crate::xz::{footer, header, CheckMethod, StreamFlags};
+use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use crc::{crc32, crc64, Hasher32};
 use std::hash::Hasher;
 use std::io;
@@ -21,11 +21,7 @@ where
     R: io::BufRead,
     W: io::Write,
 {
-    let header = {
-        let mut header_buf: [u8; 12] = [0; 12];
-        input.read_exact(&mut header_buf)?;
-        header::StreamHeader::parse(&header_buf)?
-    };
+    let header = header::StreamHeader::parse(input)?;
 
     let mut records: Vec<Record> = vec![];
     let index_size = loop {
@@ -43,7 +39,7 @@ where
         read_block(
             &mut count_input,
             output,
-            header.check_method,
+            header.stream_flags.check_method,
             &mut records,
             header_size,
         )?;
@@ -64,19 +60,15 @@ where
             )));
         }
 
-        let null_byte = digested.read_u8()?;
-        if null_byte != 0x00 {
-            return Err(error::Error::XZError(format!(
-                "Invalid null byte in footer: {:x}",
-                null_byte
-            )));
-        }
+        let stream_flags = {
+            let field = digested.read_u16::<BigEndian>()?;
+            StreamFlags::parse(field)?
+        };
 
-        let check_method = digested.read_u8()?;
-        if (header.check_method as u8) != check_method {
+        if header.stream_flags != stream_flags {
             return Err(error::Error::XZError(format!(
                 "Flags in header ({:?}) does not match footer ({:?})",
-                header.check_method, check_method
+                header.stream_flags, stream_flags
             )));
         }
     }
@@ -209,7 +201,7 @@ struct BlockHeader {
 fn read_block<'a, R, W>(
     count_input: &mut util::CountBufRead<'a, R>,
     output: &mut W,
-    check_method: header::CheckMethod,
+    check_method: CheckMethod,
     records: &mut Vec<Record>,
     header_size: u8,
 ) -> error::Result<bool>
@@ -301,17 +293,13 @@ where
     Ok(finished)
 }
 
-fn check_checksum<R>(
-    input: &mut R,
-    buf: &[u8],
-    check_method: header::CheckMethod,
-) -> error::Result<()>
+fn check_checksum<R>(input: &mut R, buf: &[u8], check_method: CheckMethod) -> error::Result<()>
 where
     R: io::BufRead,
 {
     match check_method {
-        header::CheckMethod::None => (),
-        header::CheckMethod::CRC32 => {
+        CheckMethod::None => (),
+        CheckMethod::CRC32 => {
             util::discard(input, 4)?;
             let crc32 = input.read_u32::<LittleEndian>()?;
             let digest_crc32 = crc32::checksum_ieee(buf);
@@ -322,7 +310,7 @@ where
                 )));
             }
         }
-        header::CheckMethod::CRC64 => {
+        CheckMethod::CRC64 => {
             let crc64 = input.read_u64::<LittleEndian>()?;
             let digest_crc64 = crc64::checksum_ecma(buf);
             if crc64 != digest_crc64 {
@@ -333,7 +321,7 @@ where
             }
         }
         // TODO
-        header::CheckMethod::SHA256 => {
+        CheckMethod::SHA256 => {
             return Err(error::Error::XZError(
                 "Unsupported SHA-256 checksum (not yet implemented)".to_string(),
             ));

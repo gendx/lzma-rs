@@ -1,7 +1,7 @@
 use crate::decode;
 use crate::encode::lzma2;
 use crate::encode::util;
-use crate::xz::{footer, header};
+use crate::xz::{footer, header, CheckMethod, StreamFlags};
 use byteorder::{LittleEndian, WriteBytesExt};
 use crc::{crc32, Hasher32};
 use std::io;
@@ -12,10 +12,12 @@ where
     R: io::BufRead,
     W: io::Write,
 {
-    let check_type = header::CheckMethod::None;
+    let stream_flags = StreamFlags {
+        check_method: CheckMethod::None,
+    };
 
     // Header
-    write_header(output, check_type)?;
+    write_header(output, stream_flags)?;
 
     // Block
     let (unpadded_size, unpacked_size) = write_block(input, output)?;
@@ -24,10 +26,10 @@ where
     let index_size = write_index(output, unpadded_size, unpacked_size)?;
 
     // Footer
-    write_footer(output, check_type, index_size)
+    write_footer(output, stream_flags, index_size)
 }
 
-fn write_header<W>(output: &mut W, check_type: header::CheckMethod) -> io::Result<()>
+fn write_header<W>(output: &mut W, stream_flags: StreamFlags) -> io::Result<()>
 where
     W: io::Write,
 {
@@ -35,19 +37,14 @@ where
     let mut digest = crc32::Digest::new(crc32::IEEE);
     {
         let mut digested = util::HasherWrite::new(output, &mut digest);
-        digested.write_u8(0)?;
-        digested.write_u8(check_type.into())?;
+        stream_flags.serialize(&mut digested)?;
     }
     let crc32 = digest.sum32();
     output.write_u32::<LittleEndian>(crc32)?;
     Ok(())
 }
 
-fn write_footer<W>(
-    output: &mut W,
-    check_type: header::CheckMethod,
-    index_size: usize,
-) -> io::Result<()>
+fn write_footer<W>(output: &mut W, stream_flags: StreamFlags, index_size: usize) -> io::Result<()>
 where
     W: io::Write,
 {
@@ -58,8 +55,7 @@ where
 
         let backward_size = (index_size >> 2) - 1;
         digested.write_u32::<LittleEndian>(backward_size as u32)?;
-        digested.write_u8(0)?;
-        digested.write_u8(check_type.into())?;
+        stream_flags.serialize(&mut digested)?;
     }
     let crc32 = digest.sum32();
     output.write_u32::<LittleEndian>(crc32)?;
