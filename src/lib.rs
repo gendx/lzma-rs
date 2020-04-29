@@ -6,6 +6,7 @@ mod macros;
 mod decode;
 mod encode;
 pub mod error;
+mod xz;
 
 use crate::decode::lzbuffer::LZBuffer;
 use std::io;

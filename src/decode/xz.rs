@@ -1,35 +1,14 @@
+//! Decoder for the `.xz` file format.
+
 use crate::decode::lzma2;
 use crate::decode::util;
 use crate::error;
+use crate::xz::{footer, header, CheckMethod, StreamFlags};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use crc::{crc32, crc64, Hasher32};
 use std::hash::Hasher;
 use std::io;
 use std::io::Read;
-
-const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00];
-const XZ_MAGIC_FOOTER: &[u8] = &[0x59, 0x5A];
-
-#[derive(Debug)]
-enum CheckMethod {
-    None,
-    CRC32,
-    CRC64,
-    SHA256,
-}
-
-fn get_check_method(m: u16) -> error::Result<CheckMethod> {
-    match m {
-        0x00 => Ok(CheckMethod::None),
-        0x01 => Ok(CheckMethod::CRC32),
-        0x04 => Ok(CheckMethod::CRC64),
-        0x0A => Ok(CheckMethod::SHA256),
-        _ => Err(error::Error::XZError(format!(
-            "Invalid check method {}, expected one of [0x00, 0x01, 0x04, 0x0A]",
-            m
-        ))),
-    }
-}
 
 #[derive(Debug)]
 struct Record {
@@ -42,30 +21,7 @@ where
     R: io::BufRead,
     W: io::Write,
 {
-    if !util::read_tag(input, XZ_MAGIC)? {
-        return Err(error::Error::XZError(format!(
-            "Invalid magic, expected {:?}",
-            XZ_MAGIC
-        )));
-    }
-
-    let mut digest = crc32::Digest::new(crc32::IEEE);
-    let flags = {
-        let mut digested = util::HasherRead::new(input, &mut digest);
-        digested.read_u16::<BigEndian>()?
-    };
-    let check_method = get_check_method(flags)?;
-    lzma_info!("XZ check method: {:?}", check_method);
-
-    let digest_crc32 = digest.sum32();
-
-    let crc32 = input.read_u32::<LittleEndian>()?;
-    if crc32 != digest_crc32 {
-        return Err(error::Error::XZError(format!(
-            "Invalid index CRC32: expected 0x{:08x} but got 0x{:08x}",
-            crc32, digest_crc32
-        )));
-    }
+    let header = header::StreamHeader::parse(input)?;
 
     let mut records: Vec<Record> = vec![];
     let index_size = loop {
@@ -83,7 +39,7 @@ where
         read_block(
             &mut count_input,
             output,
-            &check_method,
+            header.stream_flags.check_method,
             &mut records,
             header_size,
         )?;
@@ -104,11 +60,15 @@ where
             )));
         }
 
-        let footer_flags = digested.read_u16::<BigEndian>()?;
-        if flags != footer_flags {
+        let stream_flags = {
+            let field = digested.read_u16::<BigEndian>()?;
+            StreamFlags::parse(field)?
+        };
+
+        if header.stream_flags != stream_flags {
             return Err(error::Error::XZError(format!(
-                "Flags in header (0x{:04x}) does not match footer (0x{:04x})",
-                flags, footer_flags
+                "Flags in header ({:?}) does not match footer ({:?})",
+                header.stream_flags, stream_flags
             )));
         }
     }
@@ -121,10 +81,10 @@ where
         )));
     }
 
-    if !util::read_tag(input, XZ_MAGIC_FOOTER)? {
+    if !util::read_tag(input, footer::XZ_MAGIC_FOOTER)? {
         return Err(error::Error::XZError(format!(
             "Invalid footer magic, expected {:?}",
-            XZ_MAGIC_FOOTER
+            footer::XZ_MAGIC_FOOTER
         )));
     }
 
@@ -241,7 +201,7 @@ struct BlockHeader {
 fn read_block<'a, R, W>(
     count_input: &mut util::CountBufRead<'a, R>,
     output: &mut W,
-    check_method: &CheckMethod,
+    check_method: CheckMethod,
     records: &mut Vec<Record>,
     header_size: u8,
 ) -> error::Result<bool>
@@ -333,11 +293,11 @@ where
     Ok(finished)
 }
 
-fn check_checksum<R>(input: &mut R, buf: &[u8], check_method: &CheckMethod) -> error::Result<()>
+fn check_checksum<R>(input: &mut R, buf: &[u8], check_method: CheckMethod) -> error::Result<()>
 where
     R: io::BufRead,
 {
-    match *check_method {
+    match check_method {
         CheckMethod::None => (),
         CheckMethod::CRC32 => {
             util::discard(input, 4)?;
