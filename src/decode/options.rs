@@ -1,12 +1,14 @@
+/// Options to tweak decompression behavior.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Options {
     /// Defines whether the unpacked size should be read from the header or provided.
+    ///
     /// The default is
-    /// [`UnpackedSize::ReadFromHeader`](enum.UnpackedSize.html#variant.ReadFromHeader)
+    /// [`UnpackedSize::ReadFromHeader`](enum.UnpackedSize.html#variant.ReadFromHeader).
     pub unpacked_size: UnpackedSize,
 }
 
-/// Alternatives for defining the unpacked size of the decoded data
+/// Alternatives for defining the unpacked size of the decoded data.
 #[derive(Clone, Copy, Debug)]
 pub enum UnpackedSize {
     /// Assume that the 8 bytes used to specify the unpacked size are present in the header.

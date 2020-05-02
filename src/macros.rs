@@ -1,3 +1,4 @@
+/// Log trace message (feature: enabled).
 #[cfg(feature = "enable_logging")]
 #[macro_export]
 macro_rules! lzma_trace {
@@ -6,6 +7,7 @@ macro_rules! lzma_trace {
     }
 }
 
+/// Log debug message (feature: enabled).
 #[cfg(feature = "enable_logging")]
 #[macro_export]
 macro_rules! lzma_debug {
@@ -14,6 +16,7 @@ macro_rules! lzma_debug {
     }
 }
 
+/// Log info message (feature: enabled).
 #[cfg(feature = "enable_logging")]
 #[macro_export]
 macro_rules! lzma_info {
@@ -22,18 +25,21 @@ macro_rules! lzma_info {
     }
 }
 
+/// Log trace message (feature: disabled).
 #[cfg(not(feature = "enable_logging"))]
 #[macro_export]
 macro_rules! lzma_trace {
     ($($arg:tt)+) => {};
 }
 
+/// Log debug message (feature: disabled).
 #[cfg(not(feature = "enable_logging"))]
 #[macro_export]
 macro_rules! lzma_debug {
     ($($arg:tt)+) => {};
 }
 
+/// Log info message (feature: disabled).
 #[cfg(not(feature = "enable_logging"))]
 #[macro_export]
 macro_rules! lzma_info {

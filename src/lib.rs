@@ -1,3 +1,7 @@
+//! Pure-Rust codecs for LZMA, LZMA2, and XZ.
+
+#![deny(missing_docs)]
+#![deny(missing_debug_implementations)]
 #![forbid(unsafe_code)]
 
 #[macro_use]
@@ -11,10 +15,12 @@ mod xz;
 use crate::decode::lzbuffer::LZBuffer;
 use std::io;
 
+/// Compression helpers.
 pub mod compress {
     pub use crate::encode::options::*;
 }
 
+/// Decompression helpers.
 pub mod decompress {
     pub use crate::decode::options::*;
 }
@@ -46,7 +52,7 @@ pub fn lzma_decompress_with_options<R: io::BufRead, W: io::Write>(
     Ok(())
 }
 
-/// Compresses the data with default [`Options`](compress/struct.Options.html).
+/// Compresses data with LZMA and default [`Options`](compress/struct.Options.html).
 pub fn lzma_compress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
@@ -54,6 +60,7 @@ pub fn lzma_compress<R: io::BufRead, W: io::Write>(
     lzma_compress_with_options(input, output, &compress::Options::default())
 }
 
+/// Compress LZMA data with the provided options.
 pub fn lzma_compress_with_options<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
@@ -63,6 +70,7 @@ pub fn lzma_compress_with_options<R: io::BufRead, W: io::Write>(
     encoder.process(input)
 }
 
+/// Decompress LZMA2 data with default [`Options`](decompress/struct.Options.html).
 pub fn lzma2_decompress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
@@ -70,6 +78,7 @@ pub fn lzma2_decompress<R: io::BufRead, W: io::Write>(
     decode::lzma2::decode_stream(input, output)
 }
 
+/// Compress data with LZMA2 and default [`Options`](compress/struct.Options.html).
 pub fn lzma2_compress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
@@ -77,6 +86,7 @@ pub fn lzma2_compress<R: io::BufRead, W: io::Write>(
     encode::lzma2::encode_stream(input, output)
 }
 
+/// Decompress XZ data with default [`Options`](decompress/struct.Options.html).
 pub fn xz_decompress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
@@ -84,6 +94,7 @@ pub fn xz_decompress<R: io::BufRead, W: io::Write>(
     decode::xz::decode_stream(input, output)
 }
 
+/// Compress data with XZ and default [`Options`](compress/struct.Options.html).
 pub fn xz_compress<R: io::BufRead, W: io::Write>(input: &mut R, output: &mut W) -> io::Result<()> {
     encode::xz::encode_stream(input, output)
 }

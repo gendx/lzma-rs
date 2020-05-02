@@ -4,9 +4,6 @@
 //!
 //! [spec]: https://tukaani.org/xz/xz-file-format.txt
 
-#![deny(missing_docs)]
-#![deny(missing_debug_implementations)]
-
 use crate::error;
 use std::io;
 
