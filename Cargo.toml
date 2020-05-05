@@ -1,14 +1,14 @@
 [package]
 name = "lzma-rs"
 description = "A codec for LZMA, LZMA2 and XZ written in pure Rust"
-version = "0.1.2"
+version = "0.1.3"
 license = "MIT"
 authors = ["Guillaume Endignoux <ggendx@gmail.com>"]
 repository = "https://github.com/gendx/lzma-rs"
 readme = "README.md"
 categories = ["compression"]
 keywords = ["lzma", "compression", "decompression"]
-exclude = ["tests/*", "benches/*", "fuzz/*"]
+exclude = ["tests/*", "benches/*", "fuzz/*", ".github/*", "Cargo.lock"]
 edition = "2018"
 
 [dependencies]
