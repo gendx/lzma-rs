@@ -28,23 +28,6 @@ matrix:
         - cargo clippy -- -D warnings -W clippy::match-same-arms
         - cargo clippy --tests -- -D warnings -W clippy::match-same-arms
 
-
-# bors default configuration:
-# branches:
-#   only:
-#     # This is where pull requests from "bors r+" are built.
-#     - staging
-#     # This is where pull requests from "bors try" are built.
-#     - trying
-#     # Uncomment this to enable building pull requests.
-#     #- master
-#
-# Instead, we can just disable bors temporary branches.
-branches:
-  except:
-    - staging.tmp
-    - trying.tmp
-
 script:
   - cargo build --verbose
   - cargo test  --verbose
