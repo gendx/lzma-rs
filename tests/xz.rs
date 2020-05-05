@@ -2,9 +2,6 @@
 extern crate env_logger;
 #[macro_use]
 extern crate lzma_rs;
-#[cfg(feature = "enable_logging")]
-#[macro_use]
-extern crate log;
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
