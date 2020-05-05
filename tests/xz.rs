@@ -1,13 +1,13 @@
 #[cfg(feature = "enable_logging")]
-extern crate env_logger;
-#[macro_use]
-extern crate lzma_rs;
+use log::{debug, info};
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::xz_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
-    lzma_info!("Compressed {} -> {} bytes", x.len(), compressed.len());
-    lzma_debug!("Compressed content: {:?}", compressed);
+    #[cfg(feature = "enable_logging")]
+    info!("Compressed {} -> {} bytes", x.len(), compressed.len());
+    #[cfg(feature = "enable_logging")]
+    debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::xz_decompress(&mut bf, &mut decomp).unwrap();
