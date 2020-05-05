@@ -1,8 +1,5 @@
 #![feature(test)]
 
-#[cfg(feature = "enable_logging")]
-extern crate env_logger;
-extern crate lzma_rs;
 extern crate test;
 
 use std::io::Read;

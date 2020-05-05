@@ -1,10 +1,5 @@
 #[cfg(feature = "enable_logging")]
-extern crate env_logger;
-#[macro_use]
-extern crate lzma_rs;
-#[cfg(feature = "enable_logging")]
-#[macro_use]
-extern crate log;
+use log::{debug, info};
 
 fn round_trip(x: &[u8]) {
     round_trip_no_options(x);
@@ -22,8 +17,10 @@ fn round_trip(x: &[u8]) {
 fn round_trip_no_options(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::lzma_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
-    lzma_info!("Compressed {} -> {} bytes", x.len(), compressed.len());
-    lzma_debug!("Compressed content: {:?}", compressed);
+    #[cfg(feature = "enable_logging")]
+    info!("Compressed {} -> {} bytes", x.len(), compressed.len());
+    #[cfg(feature = "enable_logging")]
+    debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
@@ -42,8 +39,10 @@ fn round_trip_with_options(
         encode_options,
     )
     .unwrap();
-    lzma_info!("Compressed {} -> {} bytes", x.len(), compressed.len());
-    lzma_debug!("Compressed content: {:?}", compressed);
+    #[cfg(feature = "enable_logging")]
+    info!("Compressed {} -> {} bytes", x.len(), compressed.len());
+    #[cfg(feature = "enable_logging")]
+    debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::lzma_decompress_with_options(&mut bf, &mut decomp, decode_options).unwrap();
