@@ -29,7 +29,7 @@ matrix:
         - cargo clippy --tests -- -D warnings -W clippy::match-same-arms
 
 script:
-  - cargo build --verbose
-  - cargo test  --verbose
-  - cargo build --verbose --all-features
-  - cargo test  --verbose --all-features
+  - RUSTFLAGS="-D warnings" cargo build --verbose
+  - RUSTFLAGS="-D warnings" cargo test  --verbose
+  - RUSTFLAGS="-D warnings" cargo build --verbose --all-features
+  - RUSTFLAGS="-D warnings" cargo test  --verbose --all-features
