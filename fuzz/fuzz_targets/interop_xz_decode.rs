@@ -4,8 +4,8 @@ extern crate libfuzzer_sys;
 extern crate lzma_rs;
 extern crate xz2;
 
-use std::io::Read;
 use lzma_rs::error::Result;
+use std::io::Read;
 
 fn decode_xz_lzmars(compressed: &[u8]) -> Result<Vec<u8>> {
     let mut bf = std::io::Cursor::new(compressed);
@@ -23,6 +23,10 @@ fn encode_xz_xz2(data: &[u8]) -> Result<Vec<u8>> {
 
 fuzz_target!(|data: &[u8]| {
     let compressed = encode_xz_xz2(data).expect("liblzma failed to compress data");
-    let decoded = decode_xz_lzmars(&compressed).expect("We've failed to decompress what liblzma compressed");
-    assert!(data == decoded.as_slice(), "Decompressed data is different from the original");
+    let decoded =
+        decode_xz_lzmars(&compressed).expect("We've failed to decompress what liblzma compressed");
+    assert!(
+        data == decoded.as_slice(),
+        "Decompressed data is different from the original"
+    );
 });
