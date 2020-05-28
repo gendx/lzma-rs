@@ -1,8 +1,6 @@
 #![no_main]
 #[macro_use]
 extern crate libfuzzer_sys;
-extern crate lzma_rs;
-extern crate xz2;
 
 use lzma_rs::error::Result;
 use std::io::Read;
