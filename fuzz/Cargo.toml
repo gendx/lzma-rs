@@ -4,9 +4,13 @@ name = "lzma-fuzz"
 version = "0.0.1"
 authors = ["Automatically generated"]
 publish = false
+edition = "2018"
 
 [package.metadata]
 cargo-fuzz = true
+
+[dependencies]
+xz2 = "0.1.6"
 
 [dependencies.lzma-rs]
 path = ".."
@@ -28,3 +32,27 @@ path = "fuzz_targets/roundtrip_lzma2.rs"
 [[bin]]
 name = "roundtrip_xz"
 path = "fuzz_targets/roundtrip_xz.rs"
+
+[[bin]]
+name = "decompress_lzma"
+path = "fuzz_targets/decompress_lzma.rs"
+
+[[bin]]
+name = "decompress_lzma2"
+path = "fuzz_targets/decompress_lzma2.rs"
+
+[[bin]]
+name = "decompress_xz"
+path = "fuzz_targets/decompress_xz.rs"
+
+[[bin]]
+name = "compare_xz"
+path = "fuzz_targets/compare_xz.rs"
+
+[[bin]]
+name = "interop_xz_decode"
+path = "fuzz_targets/interop_xz_decode.rs"
+
+[[bin]]
+name = "interop_xz_encode"
+path = "fuzz_targets/interop_xz_encode.rs"
