@@ -22,14 +22,23 @@ matrix:
         - rustup component add rustfmt
       script:
         - cargo fmt -- --check
-        # Ideally we would run CLippy on all targets, but benchmarks depend
+        # Ideally we would run Clippy on all targets, but benchmarks depend
         # on an unstable feature and only work on nightly.
         # - cargo clippy --all-targets -- -D warnings
         - cargo clippy -- -D warnings -W clippy::match-same-arms
         - cargo clippy --tests -- -D warnings -W clippy::match-same-arms
+        # Cargo tools don't check the fuzz/ folder. Manually run the lints
+        # there.
+        - cd fuzz && cargo fmt -- --check && cd ..
+        - cd fuzz && cargo clippy -- -D warnings -W clippy::match-same-arms && cd ..
+    - name: "Build benches with nightly toolchain"
+      rust: nightly
+      script:
+        - RUSTFLAGS="-D warnings" cargo build --benches --verbose
 
 script:
   - RUSTFLAGS="-D warnings" cargo build --verbose
-  - RUSTFLAGS="-D warnings" cargo test  --verbose
+  - RUSTFLAGS="-D warnings" cargo test --verbose
   - RUSTFLAGS="-D warnings" cargo build --verbose --all-features
-  - RUSTFLAGS="-D warnings" cargo test  --verbose --all-features
+  - RUSTFLAGS="-D warnings" cargo test --verbose --all-features
+  - cd fuzz && RUSTFLAGS="-D warnings" cargo build --verbose && cd ..
