@@ -18,8 +18,10 @@ where
     fn get_output(&self) -> &W;
     // Get a mutable reference to the output sink
     fn get_output_mut(&mut self) -> &mut W;
-    // Flush the buffer to the output
+    // Consumes this buffer and flushes any data
     fn finish(self) -> io::Result<W>;
+    // Consumes this buffer without flushing any data
+    fn into_output(self) -> W;
 }
 
 // An accumulating buffer for LZ sequences
@@ -143,11 +145,16 @@ where
         &mut self.stream
     }
 
-    // Flush the buffer to the output
+    // Consumes this buffer and flushes any data
     fn finish(mut self) -> io::Result<W> {
         self.stream.write_all(self.buf.as_slice())?;
         self.stream.flush()?;
         Ok(self.stream)
+    }
+
+    // Consumes this buffer without flushing any data
+    fn into_output(self) -> W {
+        self.stream
     }
 }
 
@@ -291,12 +298,17 @@ where
         &mut self.stream
     }
 
-    // Flush the buffer to the output
+    // Consumes this buffer and flushes any data
     fn finish(mut self) -> io::Result<W> {
         if self.cursor > 0 {
             self.stream.write_all(&self.buf[0..self.cursor])?;
             self.stream.flush()?;
         }
         Ok(self.stream)
+    }
+
+    // Consumes this buffer without flushing any data
+    fn into_output(self) -> W {
+        self.stream
     }
 }

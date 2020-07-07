@@ -1,5 +1,17 @@
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
+use std::io::Read;
+
+#[cfg(feature = "stream")]
+use std::io::Write;
+
+/// Utility function to read a file into memory
+fn read_to_file(filename: &str) -> std::io::Result<Vec<u8>> {
+    let mut data = Vec::new();
+
+    std::fs::File::open(filename).and_then(|mut file| file.read_to_end(&mut data))?;
+    Ok(data)
+}
 
 fn round_trip(x: &[u8]) {
     round_trip_no_options(x);
@@ -22,17 +34,30 @@ fn round_trip_no_options(x: &[u8]) {
     info!("Compressed {} -> {} bytes", x.len(), compressed.len());
     #[cfg(feature = "enable_logging")]
     debug!("Compressed content: {:?}", compressed);
-    let mut bf = std::io::BufReader::new(compressed.as_slice());
-    let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
-    assert_eq!(decomp, x)
+
+    // test non-streaming decompression
+    {
+        let mut bf = std::io::BufReader::new(compressed.as_slice());
+        let mut decomp: Vec<u8> = Vec::new();
+        lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
+        assert_eq!(decomp, x);
+    }
+
+    #[cfg(feature = "stream")]
+    // test streaming decompression
+    {
+        let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
+        stream.write_all(&compressed).unwrap();
+        let decomp = stream.finish().unwrap();
+        assert_eq!(decomp, x);
+    }
 }
 
-fn round_trip_with_options(
+fn assert_round_trip_with_options(
     x: &[u8],
     encode_options: &lzma_rs::compress::Options,
     decode_options: &lzma_rs::decompress::Options,
-) -> lzma_rs::error::Result<Vec<u8>> {
+) {
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::lzma_compress_with_options(
         &mut std::io::BufReader::new(x),
@@ -44,61 +69,110 @@ fn round_trip_with_options(
     info!("Compressed {} -> {} bytes", x.len(), compressed.len());
     #[cfg(feature = "enable_logging")]
     debug!("Compressed content: {:?}", compressed);
-    let mut bf = std::io::BufReader::new(compressed.as_slice());
-    let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::lzma_decompress_with_options(&mut bf, &mut decomp, decode_options)?;
-    Ok(decomp)
-}
 
-fn assert_round_trip_with_options(
-    x: &[u8],
-    encode_options: &lzma_rs::compress::Options,
-    decode_options: &lzma_rs::decompress::Options,
-) {
-    assert_eq!(
-        round_trip_with_options(x, encode_options, decode_options).unwrap(),
-        x
-    )
+    // test non-streaming decompression
+    {
+        let mut bf = std::io::BufReader::new(compressed.as_slice());
+        let mut decomp: Vec<u8> = Vec::new();
+        lzma_rs::lzma_decompress_with_options(&mut bf, &mut decomp, decode_options).unwrap();
+        assert_eq!(decomp, x);
+    }
+
+    #[cfg(feature = "stream")]
+    // test streaming decompression
+    {
+        let mut stream = lzma_rs::decompress::Stream::new_with_options(decode_options, Vec::new());
+
+        if let Err(error) = stream.write_all(&compressed) {
+            // A WriteZero error may occur if decompression is finished but there
+            // are remaining `compressed` bytes to write.
+            // This is the case when the unpacked size is encoded as unknown but
+            // provided when decoding. I.e. the 5 or 6 byte end-of-stream marker
+            // is not read.
+            if error.kind() == std::io::ErrorKind::WriteZero {
+                match (encode_options.unpacked_size, decode_options.unpacked_size) {
+                    (
+                        lzma_rs::compress::UnpackedSize::WriteToHeader(None),
+                        lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(Some(_)),
+                    ) => {}
+                    _ => panic!(error),
+                }
+            } else {
+                panic!(error);
+            }
+        }
+
+        let decomp = stream.finish().unwrap();
+        assert_eq!(decomp, x);
+    }
 }
 
 fn round_trip_file(filename: &str) {
-    use std::io::Read;
-
-    let mut x = Vec::new();
-    std::fs::File::open(filename)
-        .unwrap()
-        .read_to_end(&mut x)
-        .unwrap();
+    let x = read_to_file(filename).unwrap();
     round_trip(x.as_slice());
 }
 
 fn decomp_big_file(compfile: &str, plainfile: &str) {
-    use std::io::Read;
+    let expected = read_to_file(plainfile).unwrap();
 
-    let mut expected = Vec::new();
-    std::fs::File::open(plainfile)
-        .unwrap()
-        .read_to_end(&mut expected)
-        .unwrap();
-    let mut f = std::io::BufReader::new(std::fs::File::open(compfile).unwrap());
-    let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::lzma_decompress(&mut f, &mut decomp).unwrap();
-    assert!(decomp == expected)
+    // test non-streaming decompression
+    {
+        let input = read_to_file(compfile).unwrap();
+        let mut input = std::io::BufReader::new(input.as_slice());
+        let mut decomp: Vec<u8> = Vec::new();
+        lzma_rs::lzma_decompress(&mut input, &mut decomp).unwrap();
+        assert_eq!(decomp, expected);
+    }
+
+    #[cfg(feature = "stream")]
+    // test streaming decompression
+    {
+        let mut compfile = std::fs::File::open(compfile).unwrap();
+        let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
+
+        // read file in chunks
+        let mut tmp = [0u8; 1024];
+        loop {
+            let n = compfile.read(&mut tmp).unwrap();
+            stream.write_all(&tmp[0..n]).unwrap();
+
+            if n == 0 {
+                break;
+            }
+        }
+
+        let decomp = stream.finish().unwrap();
+        assert_eq!(decomp, expected);
+    }
+}
+
+fn assert_decomp_eq(input: &[u8], expected: &[u8]) {
+    // test non-streaming decompression
+    {
+        let mut input = std::io::BufReader::new(input);
+        let mut decomp: Vec<u8> = Vec::new();
+        lzma_rs::lzma_decompress(&mut input, &mut decomp).unwrap();
+        assert_eq!(decomp, expected)
+    }
+
+    #[cfg(feature = "stream")]
+    // test streaming decompression
+    {
+        let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
+        stream.write_all(input).unwrap();
+        let decomp = stream.finish().unwrap();
+        assert_eq!(decomp, expected);
+    }
 }
 
 #[test]
+#[should_panic(expected = "HeaderTooShort")]
 fn decompress_short_header() {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     let mut decomp: Vec<u8> = Vec::new();
     // TODO: compare io::Errors?
-    assert_eq!(
-        format!(
-            "{:?}",
-            lzma_rs::lzma_decompress(&mut (b"" as &[u8]), &mut decomp).unwrap_err()
-        ),
-        String::from("LZMAError(\"LZMA header too short: failed to fill whole buffer\")")
-    )
+    lzma_rs::lzma_decompress(&mut (b"" as &[u8]), &mut decomp).unwrap();
 }
 
 #[test]
@@ -142,23 +216,23 @@ fn big_file() {
 fn decompress_empty_world() {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
-    let mut x: &[u8] = b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x83\xff\
-                         \xfb\xff\xff\xc0\x00\x00\x00";
-    let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::lzma_decompress(&mut x, &mut decomp).unwrap();
-    assert_eq!(decomp, b"")
+    assert_decomp_eq(
+        b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x83\xff\
+          \xfb\xff\xff\xc0\x00\x00\x00",
+        b"",
+    );
 }
 
 #[test]
 fn decompress_hello_world() {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
-    let mut x: &[u8] = b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
-                         \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
-                         \xa5\xb0\x00";
-    let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::lzma_decompress(&mut x, &mut decomp).unwrap();
-    assert_eq!(decomp, b"Hello world\x0a")
+    assert_decomp_eq(
+        b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
+          \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
+          \xa5\xb0\x00",
+        b"Hello world\x0a",
+    );
 }
 
 #[test]
@@ -166,12 +240,12 @@ fn decompress_huge_dict() {
     // Hello world with a dictionary of size 0x7F7F7F7F
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
-    let mut x: &[u8] = b"\x5d\x7f\x7f\x7f\x7f\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
-                         \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
-                         \xa5\xb0\x00";
-    let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::lzma_decompress(&mut x, &mut decomp).unwrap();
-    assert_eq!(decomp, b"Hello world\x0a")
+    assert_decomp_eq(
+        b"\x5d\x7f\x7f\x7f\x7f\xff\xff\xff\xff\xff\xff\xff\xff\x00\x24\x19\
+          \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
+          \xa5\xb0\x00",
+        b"Hello world\x0a",
+    );
 }
 
 #[test]
@@ -244,7 +318,6 @@ fn unpacked_size_write_none_to_header_and_use_provided_none_on_read() {
 }
 
 #[test]
-#[should_panic(expected = "exceeded memory limit of 0")]
 fn memlimit() {
     let data = b"Some data";
     let encode_options = lzma_rs::compress::Options {
@@ -253,6 +326,43 @@ fn memlimit() {
     let decode_options = lzma_rs::decompress::Options {
         unpacked_size: lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(None),
         memlimit: Some(0),
+        ..Default::default()
     };
-    round_trip_with_options(&data[..], &encode_options, &decode_options).unwrap();
+
+    let mut compressed: Vec<u8> = Vec::new();
+    lzma_rs::lzma_compress_with_options(
+        &mut std::io::BufReader::new(&data[..]),
+        &mut compressed,
+        &encode_options,
+    )
+    .unwrap();
+
+    // test non-streaming decompression
+    {
+        let mut bf = std::io::BufReader::new(compressed.as_slice());
+        let mut decomp: Vec<u8> = Vec::new();
+        let error = lzma_rs::lzma_decompress_with_options(&mut bf, &mut decomp, &decode_options)
+            .unwrap_err();
+        assert!(
+            error.to_string().contains("exceeded memory limit of 0"),
+            error.to_string()
+        );
+    }
+
+    #[cfg(feature = "stream")]
+    // test streaming decompression
+    {
+        let mut stream = lzma_rs::decompress::Stream::new_with_options(&decode_options, Vec::new());
+
+        let error = stream.write_all(&compressed).unwrap_err();
+        assert!(
+            error.to_string().contains("exceeded memory limit of 0"),
+            error.to_string()
+        );
+        let error = stream.finish().unwrap_err();
+        assert!(
+            error.to_string().contains("previous write error"),
+            error.to_string()
+        );
+    }
 }

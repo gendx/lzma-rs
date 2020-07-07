@@ -23,6 +23,8 @@ pub mod compress {
 /// Decompression helpers.
 pub mod decompress {
     pub use crate::decode::options::*;
+    #[cfg(feature = "stream")]
+    pub use crate::decode::stream::Stream;
 }
 
 /// Decompress LZMA data with default [`Options`](decompress/struct.Options.html).

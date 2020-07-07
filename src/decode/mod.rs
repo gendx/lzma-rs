@@ -7,3 +7,6 @@ pub mod options;
 pub mod rangecoder;
 pub mod util;
 pub mod xz;
+
+#[cfg(feature = "stream")]
+pub mod stream;
