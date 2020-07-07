@@ -97,10 +97,12 @@ impl LZMAParams {
     }
 }
 
-pub struct DecoderState<LZB>
+pub struct DecoderState<W, LZB>
 where
-    LZB: lzbuffer::LZBuffer,
+    W: io::Write,
+    LZB: lzbuffer::LZBuffer<W>,
 {
+    _phantom: std::marker::PhantomData<W>,
     pub output: LZB,
     // most lc significant bits of previous byte are part of the literal context
     pub lc: u32, // 0..8
@@ -125,17 +127,18 @@ where
 }
 
 // Initialize decoder with accumulating buffer
-pub fn new_accum<'a, W>(
-    output: lzbuffer::LZAccumBuffer<'a, W>,
+pub fn new_accum<W>(
+    output: lzbuffer::LZAccumBuffer<W>,
     lc: u32,
     lp: u32,
     pb: u32,
     unpacked_size: Option<u64>,
-) -> DecoderState<lzbuffer::LZAccumBuffer<'a, W>>
+) -> DecoderState<W, lzbuffer::LZAccumBuffer<W>>
 where
     W: io::Write,
 {
     DecoderState {
+        _phantom: std::marker::PhantomData,
         output,
         lc,
         lp,
@@ -159,10 +162,10 @@ where
 }
 
 // Initialize decoder with circular buffer
-pub fn new_circular<'a, W>(
-    output: &'a mut W,
+pub fn new_circular<W>(
+    output: W,
     params: LZMAParams,
-) -> error::Result<DecoderState<lzbuffer::LZCircularBuffer<'a, W>>>
+) -> error::Result<DecoderState<W, lzbuffer::LZCircularBuffer<W>>>
 where
     W: io::Write,
 {
@@ -170,16 +173,17 @@ where
 }
 
 // Initialize decoder with circular buffer
-pub fn new_circular_with_memlimit<'a, W>(
-    output: &'a mut W,
+pub fn new_circular_with_memlimit<W>(
+    output: W,
     params: LZMAParams,
     memlimit: usize,
-) -> error::Result<DecoderState<lzbuffer::LZCircularBuffer<'a, W>>>
+) -> error::Result<DecoderState<W, lzbuffer::LZCircularBuffer<W>>>
 where
     W: io::Write,
 {
     // Decoder
     let decoder = DecoderState {
+        _phantom: std::marker::PhantomData,
         output: lzbuffer::LZCircularBuffer::from_stream_with_memlimit(
             output,
             params.dict_size as usize,
@@ -208,9 +212,10 @@ where
     Ok(decoder)
 }
 
-impl<LZB> DecoderState<LZB>
+impl<W, LZB> DecoderState<W, LZB>
 where
-    LZB: lzbuffer::LZBuffer,
+    W: io::Write,
+    LZB: lzbuffer::LZBuffer<W>,
 {
     pub fn reset_state(&mut self, lc: u32, lp: u32, pb: u32) {
         self.lc = lc;
