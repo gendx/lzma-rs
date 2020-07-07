@@ -8,7 +8,7 @@ pub trait LZBuffer {
     // Retrieve the n-th last byte
     fn last_n(&self, dist: usize) -> error::Result<u8>;
     // Append a literal
-    fn append_literal(&mut self, lit: u8) -> io::Result<()>;
+    fn append_literal(&mut self, lit: u8) -> error::Result<()>;
     // Fetch an LZ sequence (length, distance) from inside the buffer
     fn append_lz(&mut self, len: usize, dist: usize) -> error::Result<()>;
     // Flush the buffer to the output
@@ -22,6 +22,7 @@ where
 {
     stream: &'a mut W, // Output sink
     buf: Vec<u8>,      // Buffer
+    memlimit: usize,   // Buffer memory limit
     len: usize,        // Total number of bytes sent through the buffer
 }
 
@@ -30,9 +31,14 @@ where
     W: io::Write,
 {
     pub fn from_stream(stream: &'a mut W) -> Self {
+        Self::from_stream_with_memlimit(stream, std::usize::MAX)
+    }
+
+    pub fn from_stream_with_memlimit(stream: &'a mut W, memlimit: usize) -> Self {
         Self {
             stream,
             buf: Vec::new(),
+            memlimit,
             len: 0,
         }
     }
@@ -84,10 +90,19 @@ where
     }
 
     // Append a literal
-    fn append_literal(&mut self, lit: u8) -> io::Result<()> {
-        self.buf.push(lit);
-        self.len += 1;
-        Ok(())
+    fn append_literal(&mut self, lit: u8) -> error::Result<()> {
+        let new_len = self.len + 1;
+
+        if new_len > self.memlimit {
+            Err(error::Error::LZMAError(format!(
+                "exceeded memory limit of {}",
+                self.memlimit
+            )))
+        } else {
+            self.buf.push(lit);
+            self.len = new_len;
+            Ok(())
+        }
     }
 
     // Fetch an LZ sequence (length, distance) from inside the buffer
@@ -127,6 +142,7 @@ where
     stream: &'a mut W, // Output sink
     buf: Vec<u8>,      // Circular buffer
     dict_size: usize,  // Length of the buffer
+    memlimit: usize,   // Buffer memory limit
     cursor: usize,     // Current position
     len: usize,        // Total number of bytes sent through the buffer
 }
@@ -135,12 +151,13 @@ impl<'a, W> LZCircularBuffer<'a, W>
 where
     W: io::Write,
 {
-    pub fn from_stream(stream: &'a mut W, dict_size: usize) -> Self {
+    pub fn from_stream_with_memlimit(stream: &'a mut W, dict_size: usize, memlimit: usize) -> Self {
         lzma_info!("Dict size in LZ buffer: {}", dict_size);
         Self {
             stream,
             buf: Vec::new(),
             dict_size,
+            memlimit,
             cursor: 0,
             len: 0,
         }
@@ -150,11 +167,21 @@ where
         *self.buf.get(index).unwrap_or(&0)
     }
 
-    fn set(&mut self, index: usize, value: u8) {
-        if self.buf.len() < index + 1 {
-            self.buf.resize(index + 1, 0);
+    fn set(&mut self, index: usize, value: u8) -> error::Result<()> {
+        let new_len = index + 1;
+
+        if new_len > self.memlimit {
+            Err(error::Error::LZMAError(format!(
+                "exceeded memory limit of {}",
+                self.memlimit
+            )))
+        } else {
+            if self.buf.len() < new_len {
+                self.buf.resize(new_len, 0);
+            }
+            self.buf[index] = value;
+            Ok(())
         }
-        self.buf[index] = value;
     }
 }
 
@@ -195,8 +222,8 @@ where
     }
 
     // Append a literal
-    fn append_literal(&mut self, lit: u8) -> io::Result<()> {
-        self.set(self.cursor, lit);
+    fn append_literal(&mut self, lit: u8) -> error::Result<()> {
+        self.set(self.cursor, lit)?;
         self.cursor += 1;
         self.len += 1;
 

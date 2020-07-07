@@ -166,9 +166,25 @@ pub fn new_circular<'a, W>(
 where
     W: io::Write,
 {
+    new_circular_with_memlimit(output, params, std::usize::MAX)
+}
+
+// Initialize decoder with circular buffer
+pub fn new_circular_with_memlimit<'a, W>(
+    output: &'a mut W,
+    params: LZMAParams,
+    memlimit: usize,
+) -> error::Result<DecoderState<lzbuffer::LZCircularBuffer<'a, W>>>
+where
+    W: io::Write,
+{
     // Decoder
     let decoder = DecoderState {
-        output: lzbuffer::LZCircularBuffer::from_stream(output, params.dict_size as usize),
+        output: lzbuffer::LZCircularBuffer::from_stream_with_memlimit(
+            output,
+            params.dict_size as usize,
+            memlimit,
+        ),
         lc: params.lc,
         lp: params.lp,
         pb: params.pb,
