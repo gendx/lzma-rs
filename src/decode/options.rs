@@ -1,5 +1,5 @@
 /// Options to tweak decompression behavior.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub struct Options {
     /// Defines whether the unpacked size should be read from the header or provided.
     ///
@@ -10,10 +10,16 @@ pub struct Options {
     ///
     /// The default is unlimited.
     pub memlimit: Option<usize>,
+    /// Determines whether to bypass end of stream validation.
+    ///
+    /// This option only applies to the [`Stream`](struct.Stream.html) API.
+    ///
+    /// The default is false (always do completion check).
+    pub allow_incomplete: bool,
 }
 
 /// Alternatives for defining the unpacked size of the decoded data.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum UnpackedSize {
     /// Assume that the 8 bytes used to specify the unpacked size are present in the header.
     /// If the bytes are `0xFFFF_FFFF_FFFF_FFFF`, assume that there is an end-of-payload marker in
@@ -36,5 +42,21 @@ pub enum UnpackedSize {
 impl Default for UnpackedSize {
     fn default() -> UnpackedSize {
         UnpackedSize::ReadFromHeader
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn test_options() {
+        assert_eq!(
+            Options {
+                unpacked_size: UnpackedSize::ReadFromHeader,
+                memlimit: None,
+                allow_incomplete: false,
+            },
+            Options::default()
+        );
     }
 }

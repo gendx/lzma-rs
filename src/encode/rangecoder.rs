@@ -238,7 +238,7 @@ mod test {
         let mut decoder = RangeDecoder::new(&mut bufread).unwrap();
         let mut prob = prob_init;
         for &b in bits {
-            assert_eq!(decoder.decode_bit(&mut prob).unwrap(), b);
+            assert_eq!(decoder.decode_bit(&mut prob, true).unwrap(), b);
         }
         assert!(decoder.is_finished_ok().unwrap());
     }
@@ -267,7 +267,7 @@ mod test {
         let mut decoder = RangeDecoder::new(&mut bufread).unwrap();
         let mut tree = decode::rangecoder::BitTree::new(num_bits);
         for &v in values {
-            assert_eq!(tree.parse(&mut decoder).unwrap(), v);
+            assert_eq!(tree.parse(&mut decoder, true).unwrap(), v);
         }
         assert!(decoder.is_finished_ok().unwrap());
     }
@@ -309,7 +309,7 @@ mod test {
         let mut decoder = RangeDecoder::new(&mut bufread).unwrap();
         let mut tree = decode::rangecoder::BitTree::new(num_bits);
         for &v in values {
-            assert_eq!(tree.parse_reverse(&mut decoder).unwrap(), v);
+            assert_eq!(tree.parse_reverse(&mut decoder, true).unwrap(), v);
         }
         assert!(decoder.is_finished_ok().unwrap());
     }
@@ -352,7 +352,7 @@ mod test {
         let mut len_decoder = LenDecoder::new();
         for &v in values {
             assert_eq!(
-                len_decoder.decode(&mut decoder, pos_state).unwrap(),
+                len_decoder.decode(&mut decoder, pos_state, true).unwrap(),
                 v as usize
             );
         }

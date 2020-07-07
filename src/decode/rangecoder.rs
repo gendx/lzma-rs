@@ -28,9 +28,51 @@ where
         Ok(dec)
     }
 
+    pub fn from_parts(stream: &'a mut R, range: u32, code: u32) -> Self {
+        Self {
+            stream,
+            range,
+            code,
+        }
+    }
+
+    pub fn into_parts(self) -> (u32, u32) {
+        (self.range, self.code)
+    }
+
+    pub fn set(&mut self, range: u32, code: u32) {
+        self.range = range;
+        self.code = code;
+    }
+
+    pub fn range(&self) -> u32 {
+        self.range
+    }
+
+    pub fn code(&self) -> u32 {
+        self.code
+    }
+
+    pub fn buf(&mut self) -> io::Result<&[u8]> {
+        self.stream.fill_buf()
+    }
+
+    pub fn remaining(&mut self) -> io::Result<usize> {
+        Ok(self.buf()?.len())
+    }
+
+    pub fn read_into(&mut self, dst: &mut [u8]) -> io::Result<usize> {
+        self.stream.read(dst)
+    }
+
     #[inline]
     pub fn is_finished_ok(&mut self) -> io::Result<bool> {
-        Ok(self.code == 0 && util::is_eof(self.stream)?)
+        Ok(self.code == 0 && self.is_eof()?)
+    }
+
+    #[inline]
+    pub fn is_eof(&mut self) -> io::Result<bool> {
+        util::is_eof(self.stream)
     }
 
     #[inline]
@@ -67,7 +109,7 @@ where
     }
 
     #[inline]
-    pub fn decode_bit(&mut self, prob: &mut u16) -> io::Result<bool> {
+    pub fn decode_bit(&mut self, prob: &mut u16, update: bool) -> io::Result<bool> {
         let bound: u32 = (self.range >> 11) * (*prob as u32);
 
         lzma_trace!(
@@ -77,13 +119,17 @@ where
             (self.code > bound) as u8
         );
         if self.code < bound {
-            *prob += (0x800_u16 - *prob) >> 5;
+            if update {
+                *prob += (0x800_u16 - *prob) >> 5;
+            }
             self.range = bound;
 
             self.normalize()?;
             Ok(false)
         } else {
-            *prob -= *prob >> 5;
+            if update {
+                *prob -= *prob >> 5;
+            }
             self.code -= bound;
             self.range -= bound;
 
@@ -92,10 +138,15 @@ where
         }
     }
 
-    fn parse_bit_tree(&mut self, num_bits: usize, probs: &mut [u16]) -> io::Result<u32> {
+    fn parse_bit_tree(
+        &mut self,
+        num_bits: usize,
+        probs: &mut [u16],
+        update: bool,
+    ) -> io::Result<u32> {
         let mut tmp: u32 = 1;
         for _ in 0..num_bits {
-            let bit = self.decode_bit(&mut probs[tmp as usize])?;
+            let bit = self.decode_bit(&mut probs[tmp as usize], update)?;
             tmp = (tmp << 1) ^ (bit as u32);
         }
         Ok(tmp - (1 << num_bits))
@@ -106,11 +157,12 @@ where
         num_bits: usize,
         probs: &mut [u16],
         offset: usize,
+        update: bool,
     ) -> io::Result<u32> {
         let mut result = 0u32;
         let mut tmp: usize = 1;
         for i in 0..num_bits {
-            let bit = self.decode_bit(&mut probs[offset + tmp])?;
+            let bit = self.decode_bit(&mut probs[offset + tmp], update)?;
             tmp = (tmp << 1) ^ (bit as usize);
             result ^= (bit as u32) << i;
         }
@@ -133,15 +185,20 @@ impl BitTree {
         }
     }
 
-    pub fn parse<R: io::BufRead>(&mut self, rangecoder: &mut RangeDecoder<R>) -> io::Result<u32> {
-        rangecoder.parse_bit_tree(self.num_bits, self.probs.as_mut_slice())
+    pub fn parse<R: io::BufRead>(
+        &mut self,
+        rangecoder: &mut RangeDecoder<R>,
+        update: bool,
+    ) -> io::Result<u32> {
+        rangecoder.parse_bit_tree(self.num_bits, self.probs.as_mut_slice(), update)
     }
 
     pub fn parse_reverse<R: io::BufRead>(
         &mut self,
         rangecoder: &mut RangeDecoder<R>,
+        update: bool,
     ) -> io::Result<u32> {
-        rangecoder.parse_reverse_bit_tree(self.num_bits, self.probs.as_mut_slice(), 0)
+        rangecoder.parse_reverse_bit_tree(self.num_bits, self.probs.as_mut_slice(), 0, update)
     }
 }
 
@@ -168,13 +225,14 @@ impl LenDecoder {
         &mut self,
         rangecoder: &mut RangeDecoder<R>,
         pos_state: usize,
+        update: bool,
     ) -> io::Result<usize> {
-        if !rangecoder.decode_bit(&mut self.choice)? {
-            Ok(self.low_coder[pos_state].parse(rangecoder)? as usize)
-        } else if !rangecoder.decode_bit(&mut self.choice2)? {
-            Ok(self.mid_coder[pos_state].parse(rangecoder)? as usize + 8)
+        if !rangecoder.decode_bit(&mut self.choice, update)? {
+            Ok(self.low_coder[pos_state].parse(rangecoder, update)? as usize)
+        } else if !rangecoder.decode_bit(&mut self.choice2, update)? {
+            Ok(self.mid_coder[pos_state].parse(rangecoder, update)? as usize + 8)
         } else {
-            Ok(self.high_coder.parse(rangecoder)? as usize + 16)
+            Ok(self.high_coder.parse(rangecoder, update)? as usize + 16)
         }
     }
 }

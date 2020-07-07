@@ -19,6 +19,7 @@ env_logger = { version = "^0.7.1", optional = true }
 
 [features]
 enable_logging = ["env_logger", "log"]
+stream = []
 
 [badges]
 travis-ci = { repository = "gendx/lzma-rs", branch = "master" }
