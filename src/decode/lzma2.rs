@@ -43,8 +43,8 @@ where
     Ok(())
 }
 
-fn parse_lzma<'a, R, W>(
-    decoder: &mut lzma::DecoderState<lzbuffer::LZAccumBuffer<'a, W>>,
+fn parse_lzma<R, W>(
+    decoder: &mut lzma::DecoderState<W, lzbuffer::LZAccumBuffer<W>>,
     input: &mut R,
     status: u8,
 ) -> error::Result<()>
@@ -165,8 +165,8 @@ where
     decoder.process(&mut rangecoder)
 }
 
-fn parse_uncompressed<'a, R, W>(
-    decoder: &mut lzma::DecoderState<lzbuffer::LZAccumBuffer<'a, W>>,
+fn parse_uncompressed<R, W>(
+    decoder: &mut lzma::DecoderState<W, lzbuffer::LZAccumBuffer<W>>,
     input: &mut R,
     reset_dict: bool,
 ) -> error::Result<()>
