@@ -253,6 +253,7 @@ fn memlimit() {
     let decode_options = lzma_rs::decompress::Options {
         unpacked_size: lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(None),
         memlimit: Some(0),
+        ..Default::default()
     };
     round_trip_with_options(&data[..], &encode_options, &decode_options).unwrap();
 }

@@ -248,6 +248,7 @@ fn memlimit() {
     let decode_options = lzma_rs::decompress::Options {
         unpacked_size: lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(None),
         memlimit: Some(0),
+        ..Default::default()
     };
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::lzma_compress_with_options(

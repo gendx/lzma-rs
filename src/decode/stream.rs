@@ -131,15 +131,17 @@ where
                     }
                 }
                 State::Run(mut state) => {
-                    // Process one last time with empty input to force end of
-                    // stream checks
-                    let mut stream = Cursor::new(&self.tmp[0..self.tmp_len]);
-                    let mut range_decoder =
-                        RangeDecoder::from_parts(&mut stream, state.range, state.code);
-                    state
-                        .decoder
-                        .process(&mut range_decoder)
-                        .map_err(|e| -> std::io::Error { e.into() })?;
+                    if !self.options.allow_incomplete {
+                        // Process one last time with empty input to force end of
+                        // stream checks
+                        let mut stream = Cursor::new(&self.tmp[0..self.tmp_len]);
+                        let mut range_decoder =
+                            RangeDecoder::from_parts(&mut stream, state.range, state.code);
+                        state
+                            .decoder
+                            .process(&mut range_decoder)
+                            .map_err(|e| -> std::io::Error { e.into() })?;
+                    }
                     state.decoder.output.finish()
                 }
             }
@@ -443,5 +445,32 @@ mod test {
         assert!(err
             .to_string()
             .contains("can\'t finish stream because of previous write error"));
+    }
+
+    #[test]
+    fn test_allow_incomplete() {
+        let input = b"Project Gutenberg's Alice's Adventures in Wonderland, by Lewis Carroll";
+
+        let mut reader = std::io::Cursor::new(&input[..]);
+        let mut compressed = Vec::new();
+        crate::lzma_compress(&mut reader, &mut compressed).unwrap();
+        let compressed = &compressed[..compressed.len() / 2];
+
+        // Should fail to finish() without the allow_incomplete option.
+        let mut stream = Stream::new(Vec::new());
+        stream.write_all(&compressed[..]).unwrap();
+        stream.finish().unwrap_err();
+
+        // Should succeed with the allow_incomplete option.
+        let mut stream = Stream::new_with_options(
+            Options {
+                allow_incomplete: true,
+                ..Default::default()
+            },
+            Vec::new(),
+        );
+        stream.write_all(&compressed[..]).unwrap();
+        let output = stream.finish().unwrap();
+        assert_eq!(output, &input[..26]);
     }
 }
