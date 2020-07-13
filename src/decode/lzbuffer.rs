@@ -170,18 +170,18 @@ where
     fn set(&mut self, index: usize, value: u8) -> error::Result<()> {
         let new_len = index + 1;
 
-        if new_len > self.memlimit {
-            Err(error::Error::LZMAError(format!(
-                "exceeded memory limit of {}",
-                self.memlimit
-            )))
-        } else {
-            if self.buf.len() < new_len {
+        if self.buf.len() < new_len {
+            if new_len <= self.memlimit {
                 self.buf.resize(new_len, 0);
+            } else {
+                return Err(error::Error::LZMAError(format!(
+                    "exceeded memory limit of {}",
+                    self.memlimit
+                )));
             }
-            self.buf[index] = value;
-            Ok(())
         }
+        self.buf[index] = value;
+        Ok(())
     }
 }
 
