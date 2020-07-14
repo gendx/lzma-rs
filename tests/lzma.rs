@@ -10,8 +10,9 @@ fn round_trip(x: &[u8]) {
     };
     let decode_options = lzma_rs::decompress::Options {
         unpacked_size: lzma_rs::decompress::UnpackedSize::ReadFromHeader,
+        ..Default::default()
     };
-    round_trip_with_options(x, &encode_options, &decode_options);
+    assert_round_trip_with_options(x, &encode_options, &decode_options);
 }
 
 fn round_trip_no_options(x: &[u8]) {
@@ -31,7 +32,7 @@ fn round_trip_with_options(
     x: &[u8],
     encode_options: &lzma_rs::compress::Options,
     decode_options: &lzma_rs::decompress::Options,
-) {
+) -> lzma_rs::error::Result<Vec<u8>> {
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::lzma_compress_with_options(
         &mut std::io::BufReader::new(x),
@@ -45,8 +46,19 @@ fn round_trip_with_options(
     debug!("Compressed content: {:?}", compressed);
     let mut bf = std::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::lzma_decompress_with_options(&mut bf, &mut decomp, decode_options).unwrap();
-    assert_eq!(decomp, x)
+    lzma_rs::lzma_decompress_with_options(&mut bf, &mut decomp, decode_options)?;
+    Ok(decomp)
+}
+
+fn assert_round_trip_with_options(
+    x: &[u8],
+    encode_options: &lzma_rs::compress::Options,
+    decode_options: &lzma_rs::decompress::Options,
+) {
+    assert_eq!(
+        round_trip_with_options(x, encode_options, decode_options).unwrap(),
+        x
+    )
 }
 
 fn round_trip_file(filename: &str) {
@@ -170,8 +182,9 @@ fn unpacked_size_write_to_header() {
     };
     let decode_options = lzma_rs::decompress::Options {
         unpacked_size: lzma_rs::decompress::UnpackedSize::ReadFromHeader,
+        ..Default::default()
     };
-    round_trip_with_options(&data[..], &encode_options, &decode_options);
+    assert_round_trip_with_options(&data[..], &encode_options, &decode_options);
 }
 
 #[test]
@@ -182,8 +195,9 @@ fn unpacked_size_provided_outside() {
     };
     let decode_options = lzma_rs::decompress::Options {
         unpacked_size: lzma_rs::decompress::UnpackedSize::UseProvided(Some(data.len() as u64)),
+        ..Default::default()
     };
-    round_trip_with_options(&data[..], &encode_options, &decode_options);
+    assert_round_trip_with_options(&data[..], &encode_options, &decode_options);
 }
 
 #[test]
@@ -196,8 +210,9 @@ fn unpacked_size_write_some_to_header_but_use_provided_on_read() {
         unpacked_size: lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(Some(
             data.len() as u64,
         )),
+        ..Default::default()
     };
-    round_trip_with_options(&data[..], &encode_options, &decode_options);
+    assert_round_trip_with_options(&data[..], &encode_options, &decode_options);
 }
 
 #[test]
@@ -210,8 +225,9 @@ fn unpacked_size_write_none_to_header_and_use_provided_on_read() {
         unpacked_size: lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(Some(
             data.len() as u64,
         )),
+        ..Default::default()
     };
-    round_trip_with_options(&data[..], &encode_options, &decode_options);
+    assert_round_trip_with_options(&data[..], &encode_options, &decode_options);
 }
 
 #[test]
@@ -222,6 +238,21 @@ fn unpacked_size_write_none_to_header_and_use_provided_none_on_read() {
     };
     let decode_options = lzma_rs::decompress::Options {
         unpacked_size: lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(None),
+        ..Default::default()
     };
-    round_trip_with_options(&data[..], &encode_options, &decode_options);
+    assert_round_trip_with_options(&data[..], &encode_options, &decode_options);
+}
+
+#[test]
+#[should_panic(expected = "exceeded memory limit of 0")]
+fn memlimit() {
+    let data = b"Some data";
+    let encode_options = lzma_rs::compress::Options {
+        unpacked_size: lzma_rs::compress::UnpackedSize::WriteToHeader(None),
+    };
+    let decode_options = lzma_rs::decompress::Options {
+        unpacked_size: lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(None),
+        memlimit: Some(0),
+    };
+    round_trip_with_options(&data[..], &encode_options, &decode_options).unwrap();
 }

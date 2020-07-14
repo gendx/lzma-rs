@@ -6,6 +6,10 @@ pub struct Options {
     /// The default is
     /// [`UnpackedSize::ReadFromHeader`](enum.UnpackedSize.html#variant.ReadFromHeader).
     pub unpacked_size: UnpackedSize,
+    /// Defines whether the dictionary's dynamic size should be limited during decompression.
+    ///
+    /// The default is unlimited.
+    pub memlimit: Option<usize>,
 }
 
 /// Alternatives for defining the unpacked size of the decoded data.
