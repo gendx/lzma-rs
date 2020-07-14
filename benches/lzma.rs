@@ -9,6 +9,7 @@ fn compress_bench(x: &[u8], b: &mut Bencher) {
     b.iter(|| {
         let mut compressed: Vec<u8> = Vec::new();
         lzma_rs::lzma_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
+        compressed
     });
 }
 
@@ -20,6 +21,7 @@ fn decompress_after_compress_bench(x: &[u8], b: &mut Bencher) {
         let mut bf = std::io::BufReader::new(compressed.as_slice());
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
+        decomp
     });
 }
 
@@ -28,6 +30,7 @@ fn decompress_bench(compressed: &[u8], b: &mut Bencher) {
         let mut bf = std::io::BufReader::new(compressed);
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
+        decomp
     });
 }
 
