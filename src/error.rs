@@ -34,6 +34,15 @@ impl Display for Error {
     }
 }
 
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Error::IOError(e) => Some(e),
+            Error::LZMAError(_) | Error::XZError(_) => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::Error;
