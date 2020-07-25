@@ -46,12 +46,8 @@ pub fn lzma_decompress_with_options<R: io::BufRead, W: io::Write>(
         decode::lzma::new_circular(output, params)?
     };
 
-    let mut rangecoder = decode::rangecoder::RangeDecoder::new(input).or_else(|e| {
-        Err(error::Error::LZMAError(format!(
-            "LZMA stream too short: {}",
-            e
-        )))
-    })?;
+    let mut rangecoder = decode::rangecoder::RangeDecoder::new(input)
+        .map_err(|e| error::Error::LZMAError(format!("LZMA stream too short: {}", e)))?;
     decoder.process(&mut rangecoder)?;
     decoder.output.finish()?;
     Ok(())
