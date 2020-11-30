@@ -9,6 +9,8 @@ use std::result;
 pub enum Error {
     /// I/O error.
     IOError(io::Error),
+    /// Not enough bytes to complete header
+    HeaderTooShort(io::Error),
     /// LZMA error.
     LZMAError(String),
     /// XZ error.
@@ -28,6 +30,7 @@ impl Display for Error {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Error::IOError(e) => write!(fmt, "io error: {}", e),
+            Error::HeaderTooShort(e) => write!(fmt, "header too short: {}", e),
             Error::LZMAError(e) => write!(fmt, "lzma error: {}", e),
             Error::XZError(e) => write!(fmt, "xz error: {}", e),
         }
@@ -37,7 +40,7 @@ impl Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Error::IOError(e) => Some(e),
+            Error::IOError(e) | Error::HeaderTooShort(e) => Some(e),
             Error::LZMAError(_) | Error::XZError(_) => None,
         }
     }

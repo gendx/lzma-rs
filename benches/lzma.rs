@@ -34,11 +34,29 @@ fn decompress_bench(compressed: &[u8], b: &mut Bencher) {
     });
 }
 
+#[cfg(feature = "stream")]
+fn decompress_stream_bench(compressed: &[u8], b: &mut Bencher) {
+    use std::io::Write;
+    b.iter(|| {
+        let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
+        stream.write_all(compressed).unwrap();
+        stream.finish().unwrap()
+    });
+}
+
 fn decompress_bench_file(compfile: &str, b: &mut Bencher) {
     let mut f = std::fs::File::open(compfile).unwrap();
     let mut compressed = Vec::new();
     f.read_to_end(&mut compressed).unwrap();
     decompress_bench(&compressed, b);
+}
+
+#[cfg(feature = "stream")]
+fn decompress_stream_bench_file(compfile: &str, b: &mut Bencher) {
+    let mut f = std::fs::File::open(compfile).unwrap();
+    let mut compressed = Vec::new();
+    f.read_to_end(&mut compressed).unwrap();
+    decompress_stream_bench(&compressed, b);
 }
 
 #[bench]
@@ -88,6 +106,14 @@ fn decompress_big_file(b: &mut Bencher) {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     decompress_bench_file("tests/files/foo.txt.lzma", b);
+}
+
+#[cfg(feature = "stream")]
+#[bench]
+fn decompress_stream_big_file(b: &mut Bencher) {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+    decompress_stream_bench_file("tests/files/foo.txt.lzma", b);
 }
 
 #[bench]
