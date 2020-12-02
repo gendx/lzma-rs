@@ -224,9 +224,10 @@ where
         &mut self,
         rangecoder: &mut rangecoder::RangeDecoder<'a, R>,
     ) -> error::Result<()> {
+        let mut unpacked = 0;
         loop {
             if let Some(unpacked_size) = self.unpacked_size {
-                if self.output.len() as u64 >= unpacked_size {
+                if unpacked as u64 >= unpacked_size {
                     break;
                 }
             } else if rangecoder.is_finished_ok()? {
@@ -243,6 +244,7 @@ where
                 let byte: u8 = self.decode_literal(rangecoder)?;
                 lzma_debug!("Literal: {}", byte);
                 self.output.append_literal(byte)?;
+                unpacked += 1;
 
                 self.state = if self.state < 4 {
                     0
@@ -268,6 +270,7 @@ where
                         self.state = if self.state < 7 { 9 } else { 11 };
                         let dist = self.rep[0] + 1;
                         self.output.append_lz(1, dist)?;
+                        unpacked += 1;
                         continue;
                     }
                 // dist = rep[i]
@@ -317,14 +320,15 @@ where
 
             let dist = self.rep[0] + 1;
             self.output.append_lz(len, dist)?;
+            unpacked += len
         }
 
         if let Some(len) = self.unpacked_size {
-            if self.output.len() as u64 != len {
+            if unpacked as u64 != len {
                 return Err(error::Error::LZMAError(format!(
                     "Expected unpacked size of {} but decompressed to {}",
                     len,
-                    self.output.len()
+                    unpacked
                 )));
             }
         }
