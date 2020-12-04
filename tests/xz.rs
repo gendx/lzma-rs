@@ -1,3 +1,5 @@
+use std::io::{BufReader, Cursor, Read};
+
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
 
@@ -8,15 +10,13 @@ fn round_trip(x: &[u8]) {
     info!("Compressed {} -> {} bytes", x.len(), compressed.len());
     #[cfg(feature = "enable_logging")]
     debug!("Compressed content: {:?}", compressed);
-    let mut bf = std::io::BufReader::new(compressed.as_slice());
+    let mut bf = BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::xz_decompress(&mut bf, &mut decomp).unwrap();
     assert_eq!(decomp, x)
 }
 
 fn round_trip_file(filename: &str) {
-    use std::io::Read;
-
     let mut x = Vec::new();
     std::fs::File::open(filename)
         .unwrap()
@@ -50,14 +50,12 @@ fn round_trip_files() {
 }
 
 fn decomp_big_file(compfile: &str, plainfile: &str) {
-    use std::io::Read;
-
     let mut expected = Vec::new();
     std::fs::File::open(plainfile)
         .unwrap()
         .read_to_end(&mut expected)
         .unwrap();
-    let mut f = std::io::BufReader::new(std::fs::File::open(compfile).unwrap());
+    let mut f = BufReader::new(std::fs::File::open(compfile).unwrap());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::xz_decompress(&mut f, &mut decomp).unwrap();
     assert!(decomp == expected)
@@ -95,4 +93,45 @@ fn decompress_hello_world() {
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::xz_decompress(&mut x, &mut decomp).unwrap();
     assert_eq!(decomp, b"Hello world\x0a")
+}
+
+#[test]
+fn test_xz_block_check_crc32() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+
+    decomp_big_file(
+        "tests/files/block-check-crc32.txt.xz",
+        "tests/files/block-check-crc32.txt",
+    );
+}
+
+#[test]
+fn test_xz_block_check_crc32_invalid() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+
+    let testcase = "tests/files/block-check-crc32.txt.xz";
+    let mut corrupted = {
+        let mut buf = vec![];
+        std::fs::File::open(testcase)
+            .unwrap()
+            .read_to_end(&mut buf)
+            .unwrap();
+        // Mangle the "Block Check" field.
+        buf[0x54] = 0x67;
+        buf[0x55] = 0x45;
+        buf[0x56] = 0x23;
+        buf[0x57] = 0x01;
+        BufReader::new(Cursor::new(buf))
+    };
+    let mut decomp = vec![];
+
+    let err_msg = lzma_rs::xz_decompress(&mut corrupted, &mut decomp)
+        .unwrap_err()
+        .to_string();
+    assert_eq!(
+        err_msg,
+        "xz error: Invalid footer CRC32: expected 0x01234567 but got 0x8b0d303e"
+    )
 }

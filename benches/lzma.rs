@@ -9,6 +9,7 @@ fn compress_bench(x: &[u8], b: &mut Bencher) {
     b.iter(|| {
         let mut compressed: Vec<u8> = Vec::new();
         lzma_rs::lzma_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
+        compressed
     });
 }
 
@@ -20,6 +21,7 @@ fn decompress_after_compress_bench(x: &[u8], b: &mut Bencher) {
         let mut bf = std::io::BufReader::new(compressed.as_slice());
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
+        decomp
     });
 }
 
@@ -28,6 +30,17 @@ fn decompress_bench(compressed: &[u8], b: &mut Bencher) {
         let mut bf = std::io::BufReader::new(compressed);
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
+        decomp
+    });
+}
+
+#[cfg(feature = "stream")]
+fn decompress_stream_bench(compressed: &[u8], b: &mut Bencher) {
+    use std::io::Write;
+    b.iter(|| {
+        let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
+        stream.write_all(compressed).unwrap();
+        stream.finish().unwrap()
     });
 }
 
@@ -36,6 +49,14 @@ fn decompress_bench_file(compfile: &str, b: &mut Bencher) {
     let mut compressed = Vec::new();
     f.read_to_end(&mut compressed).unwrap();
     decompress_bench(&compressed, b);
+}
+
+#[cfg(feature = "stream")]
+fn decompress_stream_bench_file(compfile: &str, b: &mut Bencher) {
+    let mut f = std::fs::File::open(compfile).unwrap();
+    let mut compressed = Vec::new();
+    f.read_to_end(&mut compressed).unwrap();
+    decompress_stream_bench(&compressed, b);
 }
 
 #[bench]
@@ -85,6 +106,14 @@ fn decompress_big_file(b: &mut Bencher) {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     decompress_bench_file("tests/files/foo.txt.lzma", b);
+}
+
+#[cfg(feature = "stream")]
+#[bench]
+fn decompress_stream_big_file(b: &mut Bencher) {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+    decompress_stream_bench_file("tests/files/foo.txt.lzma", b);
 }
 
 #[bench]

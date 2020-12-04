@@ -1,7 +1,6 @@
 #![no_main]
 #[macro_use]
 extern crate libfuzzer_sys;
-extern crate lzma_rs;
 
 use lzma_rs::error::Result;
 
