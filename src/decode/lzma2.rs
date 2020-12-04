@@ -146,7 +146,7 @@ where
         decoder.reset_state(lc, lp, pb);
     }
 
-    decoder.set_unpacked_size(Some(unpacked_size));
+    decoder.set_unpacked_size(Some(unpacked_size + decoder.output.len() as u64));
 
     let mut taken = input.take(packed_size);
     let mut rangecoder = rangecoder::RangeDecoder::new(&mut taken)
