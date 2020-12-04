@@ -66,6 +66,9 @@ fn big_file() {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     decomp_big_file("tests/files/foo.txt.xz", "tests/files/foo.txt");
+    decomp_big_file("tests/files/good-1-lzma2-1.xz", "tests/files/good-1-lzma2-1");
+    decomp_big_file("tests/files/good-1-lzma2-2.xz", "tests/files/good-1-lzma2-2");
+    decomp_big_file("tests/files/good-1-lzma2-3.xz", "tests/files/good-1-lzma2-3");
     decomp_big_file("tests/files/good-1-lzma2-4.xz", "tests/files/good-1-lzma2-4");
 }
 
