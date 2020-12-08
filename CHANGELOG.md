@@ -1,3 +1,5 @@
+- Update minimum supported Rust version: 1.32.0 -> 1.34.0
+
 ## 0.1.3
 
 - Minimum supported Rust version: 1.32.0.
