@@ -65,10 +65,15 @@ where
             reset_state = false;
             reset_props = false;
         }
-        1 | 2 => {
+        1 => {
             reset_dict = false;
             reset_state = true;
             reset_props = false;
+        }
+        2 => {
+            reset_dict = false;
+            reset_state = true;
+            reset_props = true;
         }
         3 => {
             reset_dict = true;
@@ -141,7 +146,7 @@ where
         decoder.reset_state(lc, lp, pb);
     }
 
-    decoder.set_unpacked_size(Some(unpacked_size));
+    decoder.set_unpacked_size(Some(unpacked_size + decoder.output.len() as u64));
 
     let mut taken = input.take(packed_size);
     let mut rangecoder = rangecoder::RangeDecoder::new(&mut taken)

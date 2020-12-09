@@ -62,7 +62,7 @@ where
     pub fn reset(&mut self) -> io::Result<()> {
         self.stream.write_all(self.buf.as_slice())?;
         self.buf.clear();
-        // TODO: clear the length ?
+        self.len = 0;
         Ok(())
     }
 }
