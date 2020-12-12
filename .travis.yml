@@ -36,6 +36,8 @@ matrix:
       script:
         - RUSTFLAGS="-D warnings" cargo build --benches --verbose
 
+before_script:
+  - cargo install cargo-fuzz
 script:
   - RUSTFLAGS="-D warnings" cargo build --verbose
   - RUSTFLAGS="-D warnings" cargo test --verbose
