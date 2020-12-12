@@ -33,22 +33,7 @@ fn round_trip_no_options(x: &[u8]) {
     #[cfg(feature = "enable_logging")]
     debug!("Compressed content: {:?}", compressed);
 
-    // test non-streaming decompression
-    {
-        let mut bf = std::io::BufReader::new(compressed.as_slice());
-        let mut decomp: Vec<u8> = Vec::new();
-        lzma_rs::lzma_decompress(&mut bf, &mut decomp).unwrap();
-        assert_eq!(decomp, x);
-    }
-
-    #[cfg(feature = "stream")]
-    // test streaming decompression
-    {
-        let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
-        stream.write_all(&compressed).unwrap();
-        let decomp = stream.finish().unwrap();
-        assert_eq!(decomp, x);
-    }
+    assert_decomp_eq(&compressed, x);
 }
 
 fn assert_round_trip_with_options(
@@ -112,54 +97,34 @@ fn round_trip_file(filename: &str) {
 
 fn decomp_big_file(compfile: &str, plainfile: &str) {
     let expected = read_all_file(plainfile).unwrap();
-
-    // test non-streaming decompression
-    {
-        let input = read_all_file(compfile).unwrap();
-        let mut input = std::io::BufReader::new(input.as_slice());
-        let mut decomp: Vec<u8> = Vec::new();
-        lzma_rs::lzma_decompress(&mut input, &mut decomp).unwrap();
-        assert_eq!(decomp, expected);
-    }
-
-    #[cfg(feature = "stream")]
-    // test streaming decompression
-    {
-        let mut compfile = std::fs::File::open(compfile).unwrap();
-        let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
-
-        // read file in chunks
-        let mut tmp = [0u8; 1024];
-        loop {
-            let n = compfile.read(&mut tmp).unwrap();
-            stream.write_all(&tmp[0..n]).unwrap();
-
-            if n == 0 {
-                break;
-            }
-        }
-
-        let decomp = stream.finish().unwrap();
-        assert_eq!(decomp, expected);
-    }
+    let compressed = read_all_file(compfile).unwrap();
+    assert_decomp_eq(&compressed, &expected);
 }
 
-fn assert_decomp_eq(input: &[u8], expected: &[u8]) {
-    // test non-streaming decompression
+fn assert_decomp_eq(compressed: &[u8], expected: &[u8]) {
     {
-        let mut input = std::io::BufReader::new(input);
+        let mut input = std::io::BufReader::new(compressed);
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress(&mut input, &mut decomp).unwrap();
-        assert_eq!(decomp, expected)
+        assert_eq!(decomp, expected);
     }
 
     #[cfg(feature = "stream")]
-    // test streaming decompression
     {
         let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
-        stream.write_all(input).unwrap();
+        stream.write_all(compressed).unwrap();
         let decomp = stream.finish().unwrap();
         assert_eq!(decomp, expected);
+
+        const CHUNK_SIZES: &[usize] = &[1, 2, 3, 4, 5, 6, 7, 8, 16, 32, 64, 128, 256, 512, 1024];
+        for &chunk_size in CHUNK_SIZES {
+            let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
+            for chunk in compressed.chunks(chunk_size) {
+                stream.write_all(chunk).unwrap();
+            }
+            let decomp = stream.finish().unwrap();
+            assert_eq!(decomp, expected);
+        }
     }
 }
 
