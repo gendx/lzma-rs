@@ -1,14 +1,12 @@
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
 use std::io::Read;
-
 #[cfg(feature = "stream")]
 use std::io::Write;
 
 /// Utility function to read a file into memory
-fn read_to_file(filename: &str) -> std::io::Result<Vec<u8>> {
+fn read_all_file(filename: &str) -> std::io::Result<Vec<u8>> {
     let mut data = Vec::new();
-
     std::fs::File::open(filename).and_then(|mut file| file.read_to_end(&mut data))?;
     Ok(data)
 }
@@ -108,16 +106,16 @@ fn assert_round_trip_with_options(
 }
 
 fn round_trip_file(filename: &str) {
-    let x = read_to_file(filename).unwrap();
+    let x = read_all_file(filename).unwrap();
     round_trip(x.as_slice());
 }
 
 fn decomp_big_file(compfile: &str, plainfile: &str) {
-    let expected = read_to_file(plainfile).unwrap();
+    let expected = read_all_file(plainfile).unwrap();
 
     // test non-streaming decompression
     {
-        let input = read_to_file(compfile).unwrap();
+        let input = read_all_file(compfile).unwrap();
         let mut input = std::io::BufReader::new(input.as_slice());
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress(&mut input, &mut decomp).unwrap();
