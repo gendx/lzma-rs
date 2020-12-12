@@ -41,4 +41,4 @@ script:
   - RUSTFLAGS="-D warnings" cargo test --verbose
   - RUSTFLAGS="-D warnings" cargo build --verbose --all-features
   - RUSTFLAGS="-D warnings" cargo test --verbose --all-features
-  - cd fuzz && RUSTFLAGS="-D warnings" cargo build --verbose && cd ..
+  - RUSTFLAGS="-D warnings" cargo fuzz build
