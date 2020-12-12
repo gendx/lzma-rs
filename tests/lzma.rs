@@ -1,3 +1,5 @@
+extern crate lzma;
+
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
 use std::io::Read;
@@ -33,7 +35,7 @@ fn round_trip_no_options(x: &[u8]) {
     #[cfg(feature = "enable_logging")]
     debug!("Compressed content: {:?}", compressed);
 
-    assert_decomp_eq(&compressed, x);
+    assert_decomp_eq(&compressed, x, /* compare_to_liblzma */ true);
 }
 
 fn assert_round_trip_with_options(
@@ -95,17 +97,19 @@ fn round_trip_file(filename: &str) {
     round_trip(x.as_slice());
 }
 
-fn decomp_big_file(compfile: &str, plainfile: &str) {
-    let expected = read_all_file(plainfile).unwrap();
-    let compressed = read_all_file(compfile).unwrap();
-    assert_decomp_eq(&compressed, &expected);
-}
-
-fn assert_decomp_eq(compressed: &[u8], expected: &[u8]) {
+fn assert_decomp_eq(compressed: &[u8], expected: &[u8], compare_to_liblzma: bool) {
+    // Test regular decompression.
     {
         let mut input = std::io::BufReader::new(compressed);
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress(&mut input, &mut decomp).unwrap();
+        assert_eq!(decomp, expected);
+    }
+
+    // Test consistency with lzma crate. Sometimes that crate fails (e.g. huge dictionary), so we
+    // have a flag to slip that.
+    if compare_to_liblzma {
+        let decomp = lzma::decompress(compressed).unwrap();
         assert_eq!(decomp, expected);
     }
 
@@ -164,15 +168,30 @@ fn round_trip_files() {
 }
 
 #[test]
-fn big_file() {
+fn decompress_big_file() {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
-    decomp_big_file("tests/files/foo.txt.lzma", "tests/files/foo.txt");
-    decomp_big_file("tests/files/hugedict.txt.lzma", "tests/files/foo.txt");
-    decomp_big_file(
-        "tests/files/range-coder-edge-case.lzma",
-        "tests/files/range-coder-edge-case",
-    );
+    let compressed = read_all_file("tests/files/foo.txt.lzma").unwrap();
+    let expected = read_all_file("tests/files/foo.txt").unwrap();
+    assert_decomp_eq(&compressed, &expected, /* compare_to_liblzma */ true);
+}
+
+#[test]
+fn decompress_big_file_with_huge_dict() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+    let compressed = read_all_file("tests/files/hugedict.txt.lzma").unwrap();
+    let expected = read_all_file("tests/files/foo.txt").unwrap();
+    assert_decomp_eq(&compressed, &expected, /* compare_to_liblzma */ false);
+}
+
+#[test]
+fn decompress_range_coder_edge_case() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+    let compressed = read_all_file("tests/files/range-coder-edge-case.lzma").unwrap();
+    let expected = read_all_file("tests/files/range-coder-edge-case").unwrap();
+    assert_decomp_eq(&compressed, &expected, /* compare_to_liblzma */ true);
 }
 
 #[test]
@@ -183,6 +202,7 @@ fn decompress_empty_world() {
         b"\x5d\x00\x00\x80\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x83\xff\
           \xfb\xff\xff\xc0\x00\x00\x00",
         b"",
+        /* compare_to_liblzma */ true,
     );
 }
 
@@ -195,6 +215,7 @@ fn decompress_hello_world() {
           \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
           \xa5\xb0\x00",
         b"Hello world\x0a",
+        /* compare_to_liblzma */ true,
     );
 }
 
@@ -208,6 +229,7 @@ fn decompress_huge_dict() {
           \x49\x98\x6f\x10\x19\xc6\xd7\x31\xeb\x36\x50\xb2\x98\x48\xff\xfe\
           \xa5\xb0\x00",
         b"Hello world\x0a",
+        /* compare_to_liblzma */ false,
     );
 }
 
