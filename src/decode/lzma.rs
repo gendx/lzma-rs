@@ -19,7 +19,7 @@ const MAX_REQUIRED_INPUT: usize = 20;
 /// Tells the decompressor if we should expect more data after parsing the
 /// current input.
 #[derive(Debug, PartialEq)]
-pub enum ProcessingMode {
+enum ProcessingMode {
     /// Streaming mode. Process the input bytes but assume there will be more
     /// chunks of input data to receive in future calls to `process_mode()`.
     Partial,
@@ -438,7 +438,7 @@ where
         Ok(())
     }
 
-    pub fn process_mode<'a, R: io::BufRead>(
+    fn process_mode<'a, R: io::BufRead>(
         &mut self,
         mut rangecoder: &mut rangecoder::RangeDecoder<'a, R>,
         mode: ProcessingMode,
@@ -468,7 +468,7 @@ where
                     && (self.partial_input_buf.position() as usize) < MAX_REQUIRED_INPUT
                     && self
                         .try_process_next(
-                            &tmp[0..self.partial_input_buf.position() as usize],
+                            &tmp[..self.partial_input_buf.position() as usize],
                             rangecoder.range,
                             rangecoder.code,
                         )
@@ -479,7 +479,7 @@ where
 
                 // Run the decompressor on the tmp buffer
                 let mut tmp_reader =
-                    io::Cursor::new(&tmp[0..self.partial_input_buf.position() as usize]);
+                    io::Cursor::new(&tmp[..self.partial_input_buf.position() as usize]);
                 let mut tmp_rangecoder = rangecoder::RangeDecoder::from_parts(
                     &mut tmp_reader,
                     rangecoder.range,
@@ -493,7 +493,7 @@ where
                 // Update tmp buffer
                 let end = self.partial_input_buf.position();
                 let new_len = end - tmp_reader.position();
-                self.partial_input_buf.get_mut()[0..new_len as usize]
+                self.partial_input_buf.get_mut()[..new_len as usize]
                     .copy_from_slice(&tmp[tmp_reader.position() as usize..end as usize]);
                 self.partial_input_buf.set_position(new_len);
 
