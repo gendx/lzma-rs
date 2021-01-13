@@ -449,8 +449,12 @@ where
                     break;
                 }
             } else if match mode {
-                ProcessingMode::Partial => rangecoder.is_eof()?,
-                ProcessingMode::Finish => rangecoder.is_finished_ok()?,
+                ProcessingMode::Partial => {
+                    rangecoder.is_eof()? && self.partial_input_buf.position() as usize == 0
+                }
+                ProcessingMode::Finish => {
+                    rangecoder.is_finished_ok()? && self.partial_input_buf.position() as usize == 0
+                }
             } {
                 break;
             }
