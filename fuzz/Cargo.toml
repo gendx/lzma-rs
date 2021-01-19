@@ -14,6 +14,7 @@ xz2 = "0.1.6"
 
 [dependencies.lzma-rs]
 path = ".."
+features = ["stream"]
 [dependencies.libfuzzer-sys]
 git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
 
@@ -56,3 +57,7 @@ path = "fuzz_targets/interop_xz_decode.rs"
 [[bin]]
 name = "interop_xz_encode"
 path = "fuzz_targets/interop_xz_encode.rs"
+
+[[bin]]
+name = "decompress_lzma_stream"
+path = "fuzz_targets/decompress_lzma_stream.rs"
