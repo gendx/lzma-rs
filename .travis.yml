@@ -35,12 +35,15 @@ matrix:
       rust: nightly
       script:
         - RUSTFLAGS="-D warnings" cargo build --benches --verbose
+    - name: "Build fuzz targets with nightly toolchain"
+      rust: nightly
+      before_script:
+        - cargo install cargo-fuzz
+      script:
+        - RUSTFLAGS="-D warnings" cargo fuzz build
 
-before_script:
-  - cargo install cargo-fuzz
 script:
   - RUSTFLAGS="-D warnings" cargo build --verbose
   - RUSTFLAGS="-D warnings" cargo test --verbose
   - RUSTFLAGS="-D warnings" cargo build --verbose --all-features
   - RUSTFLAGS="-D warnings" cargo test --verbose --all-features
-  - RUSTFLAGS="-D warnings" cargo fuzz build
