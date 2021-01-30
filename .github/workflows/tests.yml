@@ -19,19 +19,23 @@ jobs:
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
-      - uses: actions-rs/cargo@v1
+      - name: Build with default features
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --verbose
-      - uses: actions-rs/cargo@v1
+      - name: Tests with default features
+        uses: actions-rs/cargo@v1
         with:
           command: test
           args: --verbose
-      - uses: actions-rs/cargo@v1
+      - name: Build with all features
+        uses: actions-rs/cargo@v1
         with:
           command: build
           args: --all-features --verbose
-      - uses: actions-rs/cargo@v1
+      - name: Tests with all features
+        uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all-features --verbose
