@@ -9,5 +9,6 @@ jobs:
         with:
           profile: minimal
           toolchain: nightly
+          override: true
       - name: Build benches
         run: RUSTFLAGS="-D warnings" cargo build --benches --verbose

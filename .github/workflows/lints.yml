@@ -9,6 +9,7 @@ jobs:
         with:
           profile: minimal
           toolchain: stable
+          override: true
           components: rustfmt, clippy
       - name: Check formatting
         uses: actions-rs/cargo@v1

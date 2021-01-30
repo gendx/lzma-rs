@@ -19,6 +19,7 @@ jobs:
         with:
           profile: minimal
           toolchain: ${{ matrix.rust }}
+          override: true
       - name: Build with default features
         uses: actions-rs/cargo@v1
         with:
