@@ -3,7 +3,7 @@
 [![Crate](https://img.shields.io/crates/v/lzma-rs.svg)](https://crates.io/crates/lzma-rs)
 [![Documentation](https://docs.rs/lzma-rs/badge.svg)](https://docs.rs/lzma-rs)
 [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
-![Build Status](https://github.com/gendx/lzma-rs/workflows/tests/badge.svg)
+![Build Status](https://github.com/gendx/lzma-rs/workflows/Build%20and%20run%20tests/badge.svg)
 [![Build Status](https://travis-ci.org/gendx/lzma-rs.svg?branch=master)](https://travis-ci.org/gendx/lzma-rs)
 [![Minimum rust 1.36](https://img.shields.io/badge/rust-1.36%2B-orange.svg)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1360-2019-07-04)
 
