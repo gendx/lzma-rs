@@ -1,0 +1,13 @@
+on: [push, pull_request]
+name: Build benches on nightly toolchain
+jobs:
+  build_benchmarks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+      - name: Build benches
+        run: RUSTFLAGS="-D warnings" cargo build --benches --verbose
