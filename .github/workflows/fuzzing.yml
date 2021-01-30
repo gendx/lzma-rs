@@ -1,0 +1,16 @@
+on: [push, pull_request]
+name: Build fuzz targets on nightly toolchain
+jobs:
+  build_fuzzing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - name: Install cargo fuzz
+        run: cargo install cargo-fuzz
+      - name: Build fuzz targets
+        run: RUSTFLAGS="-D warnings" cargo fuzz build

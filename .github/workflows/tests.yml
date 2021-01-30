@@ -1,0 +1,42 @@
+on: [push, pull_request]
+name: Build and run tests
+jobs:
+  build_and_test:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+        rust:
+          - stable
+          - beta
+          - nightly
+          - 1.36.0  # MSRV
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - name: Build with default features
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose
+      - name: Tests with default features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --verbose
+      - name: Build with all features
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all-features --verbose
+      - name: Tests with all features
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --verbose
