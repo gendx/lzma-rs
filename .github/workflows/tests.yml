@@ -21,13 +21,17 @@ jobs:
           toolchain: ${{ matrix.rust }}
       - uses: actions-rs/cargo@v1
         with:
-          command: build --verbose
+          command: build
+          args: --verbose
       - uses: actions-rs/cargo@v1
         with:
-          command: test --verbose
+          command: test
+          args: --verbose
       - uses: actions-rs/cargo@v1
         with:
-          command: build --all-features --verbose
+          command: build
+          args: --all-features --verbose
       - uses: actions-rs/cargo@v1
         with:
-          command: test --all-features --verbose
+          command: test
+          args: --all-features --verbose
