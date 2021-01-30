@@ -38,6 +38,7 @@ matrix:
     - name: "Build fuzz targets with nightly toolchain"
       rust: nightly
       before_script:
+        - apt-get install -y liblzma-dev --no-install-recommends
         - cargo install cargo-fuzz
       script:
         - RUSTFLAGS="-D warnings" cargo fuzz build
