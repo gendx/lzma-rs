@@ -11,18 +11,33 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
+
       - name: Check formatting
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: -- --check
+
+      - name: Check formatting on fuzzing
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --manifest-path fuzz/Cargo.toml -- --check
+
       - name: Check Clippy lints
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: -- -D warnings -W clippy::match-same-arms
+
       - name: Check Clippy lints on tests
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: --tests -- -D warnings -W clippy::match-same-arms
+
+      - name: Check Clippy lints on fuzzing
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --manifest-path fuzz/Cargo.toml -- -D warnings -W clippy::match-same-arms
