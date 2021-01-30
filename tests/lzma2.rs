@@ -1,5 +1,13 @@
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
+use std::io::Read;
+
+/// Utility function to read a file into memory
+fn read_all_file(filename: &str) -> std::io::Result<Vec<u8>> {
+    let mut data = Vec::new();
+    std::fs::File::open(filename).and_then(|mut file| file.read_to_end(&mut data))?;
+    Ok(data)
+}
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
@@ -15,13 +23,7 @@ fn round_trip(x: &[u8]) {
 }
 
 fn round_trip_file(filename: &str) {
-    use std::io::Read;
-
-    let mut x = Vec::new();
-    std::fs::File::open(filename)
-        .unwrap()
-        .read_to_end(&mut x)
-        .unwrap();
+    let x = read_all_file(filename).unwrap();
     round_trip(x.as_slice());
 }
 
