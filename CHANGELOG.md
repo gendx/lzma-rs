@@ -1,4 +1,5 @@
 - Update minimum supported Rust version: 1.32.0 -> 1.36.0
+- Remove Travis-CI.
 
 ## 0.1.3
 
