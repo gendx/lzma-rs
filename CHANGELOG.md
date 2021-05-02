@@ -1,3 +1,9 @@
+## 0.1.4
+
+- Backport fixes from 0.2.0:
+  - Fix bug in LZMA2 decompression (https://github.com/gendx/lzma-rs/pull/61).
+  - Fix bug in CRC32 validation (https://github.com/gendx/lzma-rs/pull/56).
+
 ## 0.1.3
 
 - Minimum supported Rust version: 1.32.0.
