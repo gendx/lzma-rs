@@ -24,7 +24,7 @@ impl StreamFlags {
         let flags_bytes = input.to_be_bytes();
 
         if flags_bytes[0] != 0x00 {
-            return Err(error::Error::XZError(format!(
+            return Err(error::Error::XzError(format!(
                 "Invalid null byte in Stream Flags: {:x}",
                 flags_bytes[0]
             )));
@@ -53,9 +53,9 @@ impl StreamFlags {
 #[repr(u8)]
 pub enum CheckMethod {
     None = 0x00,
-    CRC32 = 0x01,
-    CRC64 = 0x04,
-    SHA256 = 0x0A,
+    Crc32 = 0x01,
+    Crc64 = 0x04,
+    Sha256 = 0x0A,
 }
 
 impl CheckMethod {
@@ -63,10 +63,10 @@ impl CheckMethod {
     pub fn try_from(id: u8) -> error::Result<CheckMethod> {
         match id {
             0x00 => Ok(CheckMethod::None),
-            0x01 => Ok(CheckMethod::CRC32),
-            0x04 => Ok(CheckMethod::CRC64),
-            0x0A => Ok(CheckMethod::SHA256),
-            _ => Err(error::Error::XZError(format!(
+            0x01 => Ok(CheckMethod::Crc32),
+            0x04 => Ok(CheckMethod::Crc64),
+            0x0A => Ok(CheckMethod::Sha256),
+            _ => Err(error::Error::XzError(format!(
                 "Invalid check method {:x}, expected one of [0x00, 0x01, 0x04, 0x0A]",
                 id
             ))),
@@ -74,9 +74,9 @@ impl CheckMethod {
     }
 }
 
-impl Into<u8> for CheckMethod {
-    fn into(self) -> u8 {
-        self as u8
+impl From<CheckMethod> for u8 {
+    fn from(method: CheckMethod) -> u8 {
+        method as u8
     }
 }
 
@@ -102,7 +102,7 @@ mod test {
     #[test]
     fn test_streamflags_roundtrip() {
         let input = StreamFlags {
-            check_method: CheckMethod::CRC32,
+            check_method: CheckMethod::Crc32,
         };
 
         let mut cursor = std::io::Cursor::new(vec![0u8; 2]);

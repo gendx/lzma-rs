@@ -1,10 +1,10 @@
-use crate::decode::lzbuffer::{LZBuffer, LZCircularBuffer};
-use crate::decode::lzma::{new_circular, new_circular_with_memlimit, DecoderState, LZMAParams};
+use crate::decode::lzbuffer::{LzBuffer, LzCircularBuffer};
+use crate::decode::lzma::{new_circular, new_circular_with_memlimit, DecoderState, LzmaParams};
 use crate::decode::rangecoder::RangeDecoder;
 use crate::decompress::Options;
 use crate::error::Error;
 use std::fmt::Debug;
-use std::io::{BufRead, Cursor, Read, Write};
+use std::io::{self, BufRead, Cursor, Read, Write};
 
 /// Minimum header length to be read.
 /// - props: u8 (1 byte)
@@ -41,7 +41,7 @@ struct RunState<W>
 where
     W: Write,
 {
-    decoder: DecoderState<W, LZCircularBuffer<W>>,
+    decoder: DecoderState<W, LzCircularBuffer<W>>,
     range: u32,
     code: u32,
 }
@@ -59,7 +59,7 @@ where
 }
 
 /// Lzma decompressor that can process multiple chunks of data using the
-/// `std::io::Write` interface.
+/// `io::Write` interface.
 pub struct Stream<W>
 where
     W: Write,
@@ -78,13 +78,13 @@ where
     W: Write,
 {
     /// Initialize the stream. This will consume the `output` which is the sink
-    /// implementing `std::io::Write` that will receive decompressed bytes.
+    /// implementing `io::Write` that will receive decompressed bytes.
     pub fn new(output: W) -> Self {
         Self::new_with_options(&Options::default(), output)
     }
 
     /// Initialize the stream with the given `options`. This will consume the
-    /// `output` which is the sink implementing `std::io::Write` that will
+    /// `output` which is the sink implementing `io::Write` that will
     /// receive decompressed bytes.
     pub fn new_with_options(options: &Options, output: W) -> Self {
         Self {
@@ -117,7 +117,7 @@ where
             match state {
                 State::Header(output) => {
                     if self.tmp.position() > 0 {
-                        Err(Error::LZMAError("failed to read header".to_string()))
+                        Err(Error::LzmaError("failed to read header".to_string()))
                     } else {
                         Ok(output)
                     }
@@ -138,7 +138,7 @@ where
             }
         } else {
             // this will occur if a call to `write()` fails
-            Err(Error::LZMAError(
+            Err(Error::LzmaError(
                 "can't finish stream because of previous write error".to_string(),
             ))
         }
@@ -153,7 +153,7 @@ where
         mut input: &mut R,
         options: &Options,
     ) -> crate::error::Result<State<W>> {
-        match LZMAParams::read_header(&mut input, options) {
+        match LzmaParams::read_header(&mut input, options) {
             Ok(params) => {
                 let decoder = if let Some(memlimit) = options.memlimit {
                     new_circular_with_memlimit(output, params, memlimit)
@@ -183,10 +183,7 @@ where
     }
 
     /// Process compressed data
-    fn read_data<R: BufRead>(
-        mut state: RunState<W>,
-        mut input: &mut R,
-    ) -> std::io::Result<RunState<W>> {
+    fn read_data<R: BufRead>(mut state: RunState<W>, mut input: &mut R) -> io::Result<RunState<W>> {
         // Construct our RangeDecoder from the previous range and code
         // values.
         let mut rangecoder = RangeDecoder::from_parts(&mut input, state.range, state.code);
@@ -195,7 +192,7 @@ where
         state
             .decoder
             .process_stream(&mut rangecoder)
-            .map_err(|e| -> std::io::Error { e.into() })?;
+            .map_err(|e| -> io::Error { e.into() })?;
 
         Ok(RunState {
             decoder: state.decoder,
@@ -222,7 +219,7 @@ impl<W> Write for Stream<W>
 where
     W: Write,
 {
-    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+    fn write(&mut self, data: &[u8]) -> io::Result<usize> {
         let mut input = Cursor::new(data);
 
         if let Some(state) = self.state.take() {
@@ -237,8 +234,8 @@ where
                         let bytes_read = if bytes_read < std::u64::MAX as usize {
                             bytes_read as u64
                         } else {
-                            return Err(std::io::Error::new(
-                                std::io::ErrorKind::Other,
+                            return Err(io::Error::new(
+                                io::ErrorKind::Other,
                                 "Failed to convert integer to u64.",
                             ));
                         };
@@ -278,8 +275,8 @@ where
                                 let bytes_read = if bytes_read < std::u64::MAX as usize {
                                     bytes_read as u64
                                 } else {
-                                    return Err(std::io::Error::new(
-                                        std::io::ErrorKind::Other,
+                                    return Err(io::Error::new(
+                                        io::ErrorKind::Other,
                                         "Failed to convert integer to u64.",
                                     ));
                                 };
@@ -296,9 +293,9 @@ where
                         // non-recoverable error
                         Err(e) => {
                             return Err(match e {
-                                Error::IOError(e) | Error::HeaderTooShort(e) => e,
-                                Error::LZMAError(e) | Error::XZError(e) => {
-                                    std::io::Error::new(std::io::ErrorKind::Other, e)
+                                Error::IoError(e) | Error::HeaderTooShort(e) => e,
+                                Error::LzmaError(e) | Error::XzError(e) => {
+                                    io::Error::new(io::ErrorKind::Other, e)
                                 }
                             });
                         }
@@ -327,7 +324,7 @@ where
     /// Flushes the output sink. The internal buffer isn't flushed to avoid
     /// corrupting the internal state. Instead, call `finish()` to finalize the
     /// stream and flush all remaining internal data.
-    fn flush(&mut self) -> std::io::Result<()> {
+    fn flush(&mut self) -> io::Result<()> {
         if let Some(ref mut state) = self.state {
             match state {
                 State::Header(_) => Ok(()),
@@ -339,9 +336,9 @@ where
     }
 }
 
-impl std::convert::Into<std::io::Error> for Error {
-    fn into(self) -> std::io::Error {
-        std::io::Error::new(std::io::ErrorKind::Other, format!("{:?}", self))
+impl From<Error> for io::Error {
+    fn from(error: Error) -> io::Error {
+        io::Error::new(io::ErrorKind::Other, format!("{:?}", error))
     }
 }
 
@@ -436,7 +433,7 @@ mod test {
     fn test_stream_chunked() {
         let small_input = include_bytes!("../../tests/files/small.txt");
 
-        let mut reader = std::io::Cursor::new(&small_input[..]);
+        let mut reader = io::Cursor::new(&small_input[..]);
         let mut small_input_compressed = Vec::new();
         crate::lzma_compress(&mut reader, &mut small_input_compressed).unwrap();
 
@@ -475,7 +472,7 @@ mod test {
     fn test_allow_incomplete() {
         let input = include_bytes!("../../tests/files/small.txt");
 
-        let mut reader = std::io::Cursor::new(&input[..]);
+        let mut reader = io::Cursor::new(&input[..]);
         let mut compressed = Vec::new();
         crate::lzma_compress(&mut reader, &mut compressed).unwrap();
         let compressed = &compressed[..compressed.len() / 2];

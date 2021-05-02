@@ -3,6 +3,8 @@ name: Build benches on nightly toolchain
 jobs:
   build_benchmarks:
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-D warnings"
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -11,4 +13,4 @@ jobs:
           toolchain: nightly
           override: true
       - name: Build benches
-        run: RUSTFLAGS="-D warnings" cargo build --benches --verbose
+        run: cargo build --benches --verbose

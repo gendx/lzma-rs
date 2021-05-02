@@ -14,8 +14,8 @@ edition = "2018"
 [dependencies]
 byteorder = "^1.0.0"
 crc = "^1.0.0"
-log = { version = "^0.4.8", optional = true }
-env_logger = { version = "^0.7.1", optional = true }
+log = { version = "^0.4.14", optional = true }
+env_logger = { version = "^0.8.3", optional = true }
 
 [dev-dependencies]
 rust-lzma = "0.5"
@@ -23,6 +23,3 @@ rust-lzma = "0.5"
 [features]
 enable_logging = ["env_logger", "log"]
 stream = []
-
-[badges]
-travis-ci = { repository = "gendx/lzma-rs", branch = "master" }

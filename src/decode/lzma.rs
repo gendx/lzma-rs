@@ -38,7 +38,7 @@ enum ProcessingStatus {
     Finished,
 }
 
-pub struct LZMAParams {
+pub struct LzmaParams {
     // most lc significant bits of previous byte are part of the literal context
     lc: u32, // 0..8
     lp: u32, // 0..4
@@ -48,8 +48,8 @@ pub struct LZMAParams {
     unpacked_size: Option<u64>,
 }
 
-impl LZMAParams {
-    pub fn read_header<R>(input: &mut R, options: &Options) -> error::Result<LZMAParams>
+impl LzmaParams {
+    pub fn read_header<R>(input: &mut R, options: &Options) -> error::Result<LzmaParams>
     where
         R: io::BufRead,
     {
@@ -58,7 +58,7 @@ impl LZMAParams {
 
         let mut pb = props as u32;
         if pb >= 225 {
-            return Err(error::Error::LZMAError(format!(
+            return Err(error::Error::LzmaError(format!(
                 "LZMA header invalid properties: {} must be < 225",
                 pb
             )));
@@ -107,7 +107,7 @@ impl LZMAParams {
 
         lzma_info!("Unpacked size: {:?}", unpacked_size);
 
-        let params = LZMAParams {
+        let params = LzmaParams {
             lc,
             lp,
             pb,
@@ -122,7 +122,7 @@ impl LZMAParams {
 pub struct DecoderState<W, LZB>
 where
     W: io::Write,
-    LZB: lzbuffer::LZBuffer<W>,
+    LZB: lzbuffer::LzBuffer<W>,
 {
     _phantom: PhantomData<W>,
     // Buffer input data here if we need more for decompression. Up to
@@ -153,12 +153,12 @@ where
 
 // Initialize decoder with accumulating buffer
 pub fn new_accum<W>(
-    output: lzbuffer::LZAccumBuffer<W>,
+    output: lzbuffer::LzAccumBuffer<W>,
     lc: u32,
     lp: u32,
     pb: u32,
     unpacked_size: Option<u64>,
-) -> DecoderState<W, lzbuffer::LZAccumBuffer<W>>
+) -> DecoderState<W, lzbuffer::LzAccumBuffer<W>>
 where
     W: io::Write,
 {
@@ -190,8 +190,8 @@ where
 // Initialize decoder with circular buffer
 pub fn new_circular<W>(
     output: W,
-    params: LZMAParams,
-) -> error::Result<DecoderState<W, lzbuffer::LZCircularBuffer<W>>>
+    params: LzmaParams,
+) -> error::Result<DecoderState<W, lzbuffer::LzCircularBuffer<W>>>
 where
     W: io::Write,
 {
@@ -201,16 +201,16 @@ where
 // Initialize decoder with circular buffer
 pub fn new_circular_with_memlimit<W>(
     output: W,
-    params: LZMAParams,
+    params: LzmaParams,
     memlimit: usize,
-) -> error::Result<DecoderState<W, lzbuffer::LZCircularBuffer<W>>>
+) -> error::Result<DecoderState<W, lzbuffer::LzCircularBuffer<W>>>
 where
     W: io::Write,
 {
     // Decoder
     let decoder = DecoderState {
         _phantom: PhantomData,
-        output: lzbuffer::LZCircularBuffer::from_stream_with_memlimit(
+        output: lzbuffer::LzCircularBuffer::from_stream_with_memlimit(
             output,
             params.dict_size as usize,
             memlimit,
@@ -242,7 +242,7 @@ where
 impl<W, LZB> DecoderState<W, LZB>
 where
     W: io::Write,
-    LZB: lzbuffer::LZBuffer<W>,
+    LZB: lzbuffer::LzBuffer<W>,
 {
     pub fn reset_state(&mut self, lc: u32, lp: u32, pb: u32) {
         self.lc = lc;
@@ -388,7 +388,7 @@ where
                     if rangecoder.is_finished_ok()? {
                         return Ok(ProcessingStatus::Finished);
                     }
-                    return Err(error::Error::LZMAError(String::from(
+                    return Err(error::Error::LzmaError(String::from(
                         "Found end-of-stream marker but more bytes are available",
                     )));
                 }
@@ -519,7 +519,7 @@ where
 
         if let Some(len) = self.unpacked_size {
             if mode == ProcessingMode::Finish && len != self.output.len() as u64 {
-                return Err(error::Error::LZMAError(format!(
+                return Err(error::Error::LzmaError(format!(
                     "Expected unpacked size of {} but decompressed to {}",
                     len,
                     self.output.len()

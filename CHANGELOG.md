@@ -1,4 +1,9 @@
-- Update minimum supported Rust version: 1.32.0 -> 1.36.0
+- Update minimum supported Rust version: 1.32.0 -> 1.40.0.
+- Update dependencies:
+  - `log`: ^0.4.8 -> ^0.4.14
+  - `env_logger`: 0.7.1 -> ^0.8.3
+- Rename acronyms to be lowercase, following clippy::upper-case-acronyms.
+- Remove Travis-CI.
 
 ## 0.1.3
 
