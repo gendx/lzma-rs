@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/lzma-rs/badge.svg)](https://docs.rs/lzma-rs)
 [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 ![Build Status](https://github.com/gendx/lzma-rs/workflows/Build%20and%20run%20tests/badge.svg)
-[![Minimum rust 1.36](https://img.shields.io/badge/rust-1.36%2B-orange.svg)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1360-2019-07-04)
+[![Minimum rust 1.36](https://img.shields.io/badge/rust-1.37%2B-orange.svg)](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1370-2019-08-15)
 
 This project is a decoder for LZMA and its variants written in pure Rust, with focus on clarity.
 It already supports LZMA, LZMA2 and a subset of the `.xz` file format.
