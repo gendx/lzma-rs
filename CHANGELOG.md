@@ -1,9 +1,17 @@
+## 0.2.0
+
 - Update minimum supported Rust version: 1.32.0 -> 1.40.0.
 - Update dependencies:
   - `log`: ^0.4.8 -> ^0.4.14
   - `env_logger`: 0.7.1 -> ^0.8.3
-- Rename acronyms to be lowercase, following clippy::upper-case-acronyms.
-- Remove Travis-CI.
+- [Breaking change] Rename acronyms to be lowercase, following clippy::upper-case-acronyms.
+- [Breaking change] Add a memory limit option (https://github.com/gendx/lzma-rs/pull/50).
+- Fix bug in LZMA2 decompression (https://github.com/gendx/lzma-rs/pull/61).
+- Fix bug in CRC32 validation (https://github.com/gendx/lzma-rs/pull/56).
+- Add a streaming mode for LZMA decompression, gated by the `stream` feature.
+- Add more fuzzing targets, including comparison with the `xz2` crate.
+- Various improvements: benchmarks, fix lint warnings.
+- Migrate from Travis-CI to GitHub Actions.
 
 ## 0.1.3
 
