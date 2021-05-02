@@ -80,10 +80,10 @@ fn assert_round_trip_with_options(
                         lzma_rs::compress::UnpackedSize::WriteToHeader(None),
                         lzma_rs::decompress::UnpackedSize::ReadHeaderButUseProvided(Some(_)),
                     ) => {}
-                    _ => panic!(error),
+                    _ => panic!("{}", error),
                 }
             } else {
-                panic!(error);
+                panic!("{}", error);
             }
         }
 
@@ -343,11 +343,13 @@ fn memlimit() {
         let error = stream.write_all(&compressed).unwrap_err();
         assert!(
             error.to_string().contains("exceeded memory limit of 0"),
+            "{}",
             error.to_string()
         );
         let error = stream.finish().unwrap_err();
         assert!(
             error.to_string().contains("previous write error"),
+            "{}",
             error.to_string()
         );
     }
