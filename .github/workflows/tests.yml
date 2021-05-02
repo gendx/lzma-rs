@@ -12,6 +12,7 @@ jobs:
           - beta
           - nightly
           - 1.36.0  # MSRV
+      fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
