@@ -269,9 +269,10 @@ where
     let count = count_input.count();
     let padding_size = ((count ^ 0x03) + 1) & 0x03;
     lzma_info!(
-        "XZ block: {} byte(s) read, {} byte(s) of padding",
+        "XZ block: {} byte(s) read, {} byte(s) of padding, check method {:?}",
         count,
-        padding_size
+        padding_size,
+        check_method
     );
     for _ in 0..padding_size {
         let byte = count_input.read_u8()?;
@@ -281,7 +282,7 @@ where
             ));
         }
     }
-    check_checksum(count_input, tmpbuf.as_slice(), check_method)?;
+    validate_block_check(count_input, tmpbuf.as_slice(), check_method)?;
 
     output.write_all(tmpbuf.as_slice())?;
     records.push(Record {
@@ -293,14 +294,20 @@ where
     Ok(finished)
 }
 
-fn check_checksum<R>(input: &mut R, buf: &[u8], check_method: CheckMethod) -> error::Result<()>
+/// Verify block checksum against the "Block Check" field.
+///
+/// See spec section 3.4 for details.
+fn validate_block_check<R>(
+    input: &mut R,
+    buf: &[u8],
+    check_method: CheckMethod,
+) -> error::Result<()>
 where
     R: io::BufRead,
 {
     match check_method {
         CheckMethod::None => (),
         CheckMethod::CRC32 => {
-            util::discard(input, 4)?;
             let crc32 = input.read_u32::<LittleEndian>()?;
             let digest_crc32 = crc32::checksum_ieee(buf);
             if crc32 != digest_crc32 {

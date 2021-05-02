@@ -12,11 +12,6 @@ pub fn is_eof<R: io::BufRead>(input: &mut R) -> io::Result<bool> {
     Ok(buf.is_empty())
 }
 
-pub fn discard<R: io::Read>(input: &mut R, n: usize) -> io::Result<()> {
-    let mut buf = vec![0; n];
-    input.read_exact(buf.as_mut_slice())
-}
-
 pub fn flush_zero_padding<R: io::BufRead>(input: &mut R) -> io::Result<bool> {
     loop {
         let len = {
