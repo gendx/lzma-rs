@@ -1,4 +1,5 @@
-- Update minimum supported Rust version: 1.32.0 -> 1.36.0
+- Update minimum supported Rust version: 1.32.0 -> 1.36.0.
+- Rename acronyms to be lowercase, following clippy::upper-case-acronyms.
 - Remove Travis-CI.
 
 ## 0.1.3

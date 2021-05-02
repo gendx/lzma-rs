@@ -8,13 +8,13 @@ use std::result;
 #[derive(Debug)]
 pub enum Error {
     /// I/O error.
-    IOError(io::Error),
+    IoError(io::Error),
     /// Not enough bytes to complete header
     HeaderTooShort(io::Error),
     /// LZMA error.
-    LZMAError(String),
+    LzmaError(String),
     /// XZ error.
-    XZError(String),
+    XzError(String),
 }
 
 /// Library result alias.
@@ -22,17 +22,17 @@ pub type Result<T> = result::Result<T, Error>;
 
 impl From<io::Error> for Error {
     fn from(e: io::Error) -> Error {
-        Error::IOError(e)
+        Error::IoError(e)
     }
 }
 
 impl Display for Error {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::IOError(e) => write!(fmt, "io error: {}", e),
+            Error::IoError(e) => write!(fmt, "io error: {}", e),
             Error::HeaderTooShort(e) => write!(fmt, "header too short: {}", e),
-            Error::LZMAError(e) => write!(fmt, "lzma error: {}", e),
-            Error::XZError(e) => write!(fmt, "xz error: {}", e),
+            Error::LzmaError(e) => write!(fmt, "lzma error: {}", e),
+            Error::XzError(e) => write!(fmt, "xz error: {}", e),
         }
     }
 }
@@ -40,8 +40,8 @@ impl Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Error::IOError(e) | Error::HeaderTooShort(e) => Some(e),
-            Error::LZMAError(_) | Error::XZError(_) => None,
+            Error::IoError(e) | Error::HeaderTooShort(e) => Some(e),
+            Error::LzmaError(_) | Error::XzError(_) => None,
         }
     }
 }
@@ -53,7 +53,7 @@ mod test {
     #[test]
     fn test_display() {
         assert_eq!(
-            Error::IOError(std::io::Error::new(
+            Error::IoError(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "this is an error"
             ))
@@ -61,11 +61,11 @@ mod test {
             "io error: this is an error"
         );
         assert_eq!(
-            Error::LZMAError("this is an error".to_string()).to_string(),
+            Error::LzmaError("this is an error".to_string()).to_string(),
             "lzma error: this is an error"
         );
         assert_eq!(
-            Error::XZError("this is an error".to_string()).to_string(),
+            Error::XzError("this is an error".to_string()).to_string(),
             "xz error: this is an error"
         );
     }

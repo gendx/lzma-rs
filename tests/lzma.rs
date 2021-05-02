@@ -330,6 +330,7 @@ fn memlimit() {
             .unwrap_err();
         assert!(
             error.to_string().contains("exceeded memory limit of 0"),
+            "{}",
             error.to_string()
         );
     }

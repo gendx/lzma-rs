@@ -1,5 +1,5 @@
 use crate::decode::lzbuffer;
-use crate::decode::lzbuffer::LZBuffer;
+use crate::decode::lzbuffer::LzBuffer;
 use crate::decode::lzma;
 use crate::decode::rangecoder;
 use crate::error;
@@ -12,13 +12,13 @@ where
     R: io::BufRead,
     W: io::Write,
 {
-    let accum = lzbuffer::LZAccumBuffer::from_stream(output);
+    let accum = lzbuffer::LzAccumBuffer::from_stream(output);
     let mut decoder = lzma::new_accum(accum, 0, 0, 0, None);
 
     loop {
         let status = input
             .read_u8()
-            .map_err(|e| error::Error::LZMAError(format!("LZMA2 expected new status: {}", e)))?;
+            .map_err(|e| error::Error::LzmaError(format!("LZMA2 expected new status: {}", e)))?;
 
         lzma_info!("LZMA2 status: {}", status);
 
@@ -41,7 +41,7 @@ where
 }
 
 fn parse_lzma<R, W>(
-    decoder: &mut lzma::DecoderState<W, lzbuffer::LZAccumBuffer<W>>,
+    decoder: &mut lzma::DecoderState<W, lzbuffer::LzAccumBuffer<W>>,
     input: &mut R,
     status: u8,
 ) -> error::Result<()>
@@ -50,7 +50,7 @@ where
     W: io::Write,
 {
     if status & 0x80 == 0 {
-        return Err(error::Error::LZMAError(format!(
+        return Err(error::Error::LzmaError(format!(
             "LZMA2 invalid status {}, must be 0, 1, 2 or >= 128",
             status
         )));
@@ -85,12 +85,12 @@ where
 
     let unpacked_size = input
         .read_u16::<BigEndian>()
-        .map_err(|e| error::Error::LZMAError(format!("LZMA2 expected unpacked size: {}", e)))?;
+        .map_err(|e| error::Error::LzmaError(format!("LZMA2 expected unpacked size: {}", e)))?;
     let unpacked_size = ((((status & 0x1F) as u64) << 16) | (unpacked_size as u64)) + 1;
 
     let packed_size = input
         .read_u16::<BigEndian>()
-        .map_err(|e| error::Error::LZMAError(format!("LZMA2 expected packed size: {}", e)))?;
+        .map_err(|e| error::Error::LzmaError(format!("LZMA2 expected packed size: {}", e)))?;
     let packed_size = (packed_size as u64) + 1;
 
     lzma_info!(
@@ -113,12 +113,12 @@ where
 
         if reset_props {
             let props = input.read_u8().map_err(|e| {
-                error::Error::LZMAError(format!("LZMA2 expected new properties: {}", e))
+                error::Error::LzmaError(format!("LZMA2 expected new properties: {}", e))
             })?;
 
             pb = props as u32;
             if pb >= 225 {
-                return Err(error::Error::LZMAError(format!(
+                return Err(error::Error::LzmaError(format!(
                     "LZMA2 invalid properties: {} must be < 225",
                     pb
                 )));
@@ -130,7 +130,7 @@ where
             pb /= 5;
 
             if lc + lp > 4 {
-                return Err(error::Error::LZMAError(format!(
+                return Err(error::Error::LzmaError(format!(
                     "LZMA2 invalid properties: lc + lp ({} + {}) must be <= 4",
                     lc, lp
                 )));
@@ -150,12 +150,12 @@ where
 
     let mut taken = input.take(packed_size);
     let mut rangecoder = rangecoder::RangeDecoder::new(&mut taken)
-        .map_err(|e| error::Error::LZMAError(format!("LZMA input too short: {}", e)))?;
+        .map_err(|e| error::Error::LzmaError(format!("LZMA input too short: {}", e)))?;
     decoder.process(&mut rangecoder)
 }
 
 fn parse_uncompressed<R, W>(
-    decoder: &mut lzma::DecoderState<W, lzbuffer::LZAccumBuffer<W>>,
+    decoder: &mut lzma::DecoderState<W, lzbuffer::LzAccumBuffer<W>>,
     input: &mut R,
     reset_dict: bool,
 ) -> error::Result<()>
@@ -165,7 +165,7 @@ where
 {
     let unpacked_size = input
         .read_u16::<BigEndian>()
-        .map_err(|e| error::Error::LZMAError(format!("LZMA2 expected unpacked size: {}", e)))?;
+        .map_err(|e| error::Error::LzmaError(format!("LZMA2 expected unpacked size: {}", e)))?;
     let unpacked_size = (unpacked_size as usize) + 1;
 
     lzma_info!(
@@ -180,7 +180,7 @@ where
 
     let mut buf = vec![0; unpacked_size];
     input.read_exact(buf.as_mut_slice()).map_err(|e| {
-        error::Error::LZMAError(format!(
+        error::Error::LzmaError(format!(
             "LZMA2 expected {} uncompressed bytes: {}",
             unpacked_size, e
         ))

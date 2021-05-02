@@ -1,5 +1,5 @@
-use crate::decode::lzbuffer::{LZBuffer, LZCircularBuffer};
-use crate::decode::lzma::{new_circular, new_circular_with_memlimit, DecoderState, LZMAParams};
+use crate::decode::lzbuffer::{LzBuffer, LzCircularBuffer};
+use crate::decode::lzma::{new_circular, new_circular_with_memlimit, DecoderState, LzmaParams};
 use crate::decode::rangecoder::RangeDecoder;
 use crate::decompress::Options;
 use crate::error::Error;
@@ -41,7 +41,7 @@ struct RunState<W>
 where
     W: Write,
 {
-    decoder: DecoderState<W, LZCircularBuffer<W>>,
+    decoder: DecoderState<W, LzCircularBuffer<W>>,
     range: u32,
     code: u32,
 }
@@ -117,7 +117,7 @@ where
             match state {
                 State::Header(output) => {
                     if self.tmp.position() > 0 {
-                        Err(Error::LZMAError("failed to read header".to_string()))
+                        Err(Error::LzmaError("failed to read header".to_string()))
                     } else {
                         Ok(output)
                     }
@@ -138,7 +138,7 @@ where
             }
         } else {
             // this will occur if a call to `write()` fails
-            Err(Error::LZMAError(
+            Err(Error::LzmaError(
                 "can't finish stream because of previous write error".to_string(),
             ))
         }
@@ -153,7 +153,7 @@ where
         mut input: &mut R,
         options: &Options,
     ) -> crate::error::Result<State<W>> {
-        match LZMAParams::read_header(&mut input, options) {
+        match LzmaParams::read_header(&mut input, options) {
             Ok(params) => {
                 let decoder = if let Some(memlimit) = options.memlimit {
                     new_circular_with_memlimit(output, params, memlimit)
@@ -296,8 +296,8 @@ where
                         // non-recoverable error
                         Err(e) => {
                             return Err(match e {
-                                Error::IOError(e) | Error::HeaderTooShort(e) => e,
-                                Error::LZMAError(e) | Error::XZError(e) => {
+                                Error::IoError(e) | Error::HeaderTooShort(e) => e,
+                                Error::LzmaError(e) | Error::XzError(e) => {
                                     std::io::Error::new(std::io::ErrorKind::Other, e)
                                 }
                             });

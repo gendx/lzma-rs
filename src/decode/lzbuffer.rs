@@ -1,7 +1,7 @@
 use crate::error;
 use std::io;
 
-pub trait LZBuffer<W>
+pub trait LzBuffer<W>
 where
     W: io::Write,
 {
@@ -25,7 +25,7 @@ where
 }
 
 // An accumulating buffer for LZ sequences
-pub struct LZAccumBuffer<W>
+pub struct LzAccumBuffer<W>
 where
     W: io::Write,
 {
@@ -35,7 +35,7 @@ where
     len: usize,      // Total number of bytes sent through the buffer
 }
 
-impl<W> LZAccumBuffer<W>
+impl<W> LzAccumBuffer<W>
 where
     W: io::Write,
 {
@@ -67,7 +67,7 @@ where
     }
 }
 
-impl<W> LZBuffer<W> for LZAccumBuffer<W>
+impl<W> LzBuffer<W> for LzAccumBuffer<W>
 where
     W: io::Write,
 {
@@ -89,7 +89,7 @@ where
     fn last_n(&self, dist: usize) -> error::Result<u8> {
         let buf_len = self.buf.len();
         if dist > buf_len {
-            return Err(error::Error::LZMAError(format!(
+            return Err(error::Error::LzmaError(format!(
                 "Match distance {} is beyond output size {}",
                 dist, buf_len
             )));
@@ -103,7 +103,7 @@ where
         let new_len = self.len + 1;
 
         if new_len > self.memlimit {
-            Err(error::Error::LZMAError(format!(
+            Err(error::Error::LzmaError(format!(
                 "exceeded memory limit of {}",
                 self.memlimit
             )))
@@ -119,7 +119,7 @@ where
         lzma_debug!("LZ {{ len: {}, dist: {} }}", len, dist);
         let buf_len = self.buf.len();
         if dist > buf_len {
-            return Err(error::Error::LZMAError(format!(
+            return Err(error::Error::LzmaError(format!(
                 "LZ distance {} is beyond output size {}",
                 dist, buf_len
             )));
@@ -159,7 +159,7 @@ where
 }
 
 // A circular buffer for LZ sequences
-pub struct LZCircularBuffer<W>
+pub struct LzCircularBuffer<W>
 where
     W: io::Write,
 {
@@ -171,7 +171,7 @@ where
     len: usize,       // Total number of bytes sent through the buffer
 }
 
-impl<W> LZCircularBuffer<W>
+impl<W> LzCircularBuffer<W>
 where
     W: io::Write,
 {
@@ -198,7 +198,7 @@ where
             if new_len <= self.memlimit {
                 self.buf.resize(new_len, 0);
             } else {
-                return Err(error::Error::LZMAError(format!(
+                return Err(error::Error::LzmaError(format!(
                     "exceeded memory limit of {}",
                     self.memlimit
                 )));
@@ -209,7 +209,7 @@ where
     }
 }
 
-impl<W> LZBuffer<W> for LZCircularBuffer<W>
+impl<W> LzBuffer<W> for LzCircularBuffer<W>
 where
     W: io::Write,
 {
@@ -229,13 +229,13 @@ where
     // Retrieve the n-th last byte
     fn last_n(&self, dist: usize) -> error::Result<u8> {
         if dist > self.dict_size {
-            return Err(error::Error::LZMAError(format!(
+            return Err(error::Error::LzmaError(format!(
                 "Match distance {} is beyond dictionary size {}",
                 dist, self.dict_size
             )));
         }
         if dist > self.len {
-            return Err(error::Error::LZMAError(format!(
+            return Err(error::Error::LzmaError(format!(
                 "Match distance {} is beyond output size {}",
                 dist, self.len
             )));
@@ -264,13 +264,13 @@ where
     fn append_lz(&mut self, len: usize, dist: usize) -> error::Result<()> {
         lzma_debug!("LZ {{ len: {}, dist: {} }}", len, dist);
         if dist > self.dict_size {
-            return Err(error::Error::LZMAError(format!(
+            return Err(error::Error::LzmaError(format!(
                 "LZ distance {} is beyond dictionary size {}",
                 dist, self.dict_size
             )));
         }
         if dist > self.len {
-            return Err(error::Error::LZMAError(format!(
+            return Err(error::Error::LzmaError(format!(
                 "LZ distance {} is beyond output size {}",
                 dist, self.len
             )));
