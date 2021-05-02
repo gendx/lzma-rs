@@ -11,13 +11,12 @@ fn decode_lzma(compressed: &[u8]) -> Result<Vec<u8>> {
     Ok(decomp)
 }
 
-fn decode_lzma_stream(compressed: &[u8], chunk_size: usize) -> Result<Vec<u8>> {
+fn decode_lzma_stream(compressed: &[u8], chunk_size: usize) -> Vec<u8> {
     let mut stream = lzma_rs::decompress::Stream::new(Vec::new());
     for chunk in compressed.chunks(chunk_size) {
         stream.write_all(chunk).unwrap();
     }
-    let decomp = stream.finish().unwrap();
-    Ok(decomp)
+    stream.finish().unwrap()
 }
 
 fuzz_target!(|input: &[u8]| {
@@ -33,7 +32,7 @@ fuzz_target!(|input: &[u8]| {
         let mut compressed = Vec::new();
         lzma_rs::lzma_compress(&mut std::io::Cursor::new(input), &mut compressed).unwrap();
         let decompressed = decode_lzma(&compressed).unwrap();
-        let decompressed_stream = decode_lzma_stream(&compressed, chunk_size).unwrap();
+        let decompressed_stream = decode_lzma_stream(&compressed, chunk_size);
         if decompressed_stream.len() != decompressed.len() {
             panic!(
                 "chunk size: {}, ref len: {}, act len: {}",
