@@ -74,9 +74,9 @@ impl CheckMethod {
     }
 }
 
-impl Into<u8> for CheckMethod {
-    fn into(self) -> u8 {
-        self as u8
+impl From<CheckMethod> for u8 {
+    fn from(method: CheckMethod) -> u8 {
+        method as u8
     }
 }
 
