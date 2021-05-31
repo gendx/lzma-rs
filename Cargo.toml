@@ -23,3 +23,6 @@ rust-lzma = "0.5"
 [features]
 enable_logging = ["env_logger", "log"]
 stream = []
+
+[package.metadata.docs.rs]
+features = ["stream"]
