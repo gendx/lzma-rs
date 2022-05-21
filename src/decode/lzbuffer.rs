@@ -39,11 +39,7 @@ impl<W> LzAccumBuffer<W>
 where
     W: io::Write,
 {
-    pub fn from_stream(stream: W) -> Self {
-        Self::from_stream_with_memlimit(stream, std::usize::MAX)
-    }
-
-    pub fn from_stream_with_memlimit(stream: W, memlimit: usize) -> Self {
+    pub fn from_stream(stream: W, memlimit: usize) -> Self {
         Self {
             stream,
             buf: Vec::new(),
@@ -175,7 +171,7 @@ impl<W> LzCircularBuffer<W>
 where
     W: io::Write,
 {
-    pub fn from_stream_with_memlimit(stream: W, dict_size: usize, memlimit: usize) -> Self {
+    pub fn from_stream(stream: W, dict_size: usize, memlimit: usize) -> Self {
         lzma_info!("Dict size in LZ buffer: {}", dict_size);
         Self {
             stream,

@@ -180,6 +180,10 @@ impl BitTree {
     ) -> io::Result<u32> {
         rangecoder.parse_reverse_bit_tree(self.num_bits, self.probs.as_mut_slice(), 0, update)
     }
+
+    pub fn reset(&mut self) {
+        self.probs.fill(0x400);
+    }
 }
 
 pub struct LenDecoder {
@@ -214,5 +218,13 @@ impl LenDecoder {
         } else {
             Ok(self.high_coder.parse(rangecoder, update)? as usize + 16)
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.choice = 0x400;
+        self.choice2 = 0x400;
+        self.low_coder.iter_mut().for_each(|t| t.reset());
+        self.mid_coder.iter_mut().for_each(|t| t.reset());
+        self.high_coder.reset();
     }
 }
