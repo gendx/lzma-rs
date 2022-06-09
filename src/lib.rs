@@ -9,10 +9,12 @@ mod macros;
 
 mod decode;
 mod encode;
+
 pub mod error;
+
 mod xz;
 
-use crate::decode::lzbuffer::LzBuffer;
+use crate::decode::lzbuffer::{LzBuffer, LzCircularBuffer};
 use std::io;
 
 /// Compression helpers.
@@ -42,16 +44,17 @@ pub fn lzma_decompress_with_options<R: io::BufRead, W: io::Write>(
     options: &decompress::Options,
 ) -> error::Result<()> {
     let params = decode::lzma::LzmaParams::read_header(input, options)?;
-    let mut decoder = if let Some(memlimit) = options.memlimit {
-        decode::lzma::new_circular_with_memlimit(output, params, memlimit)?
-    } else {
-        decode::lzma::new_circular(output, params)?
-    };
+    let mut decoder = decode::lzma::DecoderState::new(params.properties, params.unpacked_size);
+    let mut output = LzCircularBuffer::from_stream(
+        output,
+        params.dict_size as usize,
+        options.memlimit.unwrap_or(usize::MAX),
+    );
 
     let mut rangecoder = decode::rangecoder::RangeDecoder::new(input)
         .map_err(|e| error::Error::LzmaError(format!("LZMA stream too short: {}", e)))?;
-    decoder.process(&mut rangecoder)?;
-    decoder.output.finish()?;
+    decoder.process(&mut output, &mut rangecoder)?;
+    output.finish()?;
     Ok(())
 }
 

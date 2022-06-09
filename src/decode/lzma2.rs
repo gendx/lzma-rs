@@ -1,6 +1,7 @@
 use crate::decode::lzbuffer;
 use crate::decode::lzbuffer::LzBuffer;
 use crate::decode::lzma;
+use crate::decode::lzma::LzmaProperties;
 use crate::decode::rangecoder;
 use crate::error;
 use byteorder::{BigEndian, ReadBytesExt};
@@ -12,8 +13,15 @@ where
     R: io::BufRead,
     W: io::Write,
 {
-    let accum = lzbuffer::LzAccumBuffer::from_stream(output);
-    let mut decoder = lzma::new_accum(accum, 0, 0, 0, None);
+    let mut accum = lzbuffer::LzAccumBuffer::from_stream(output, usize::MAX);
+    let mut decoder = lzma::DecoderState::new(
+        LzmaProperties {
+            lc: 0,
+            lp: 0,
+            pb: 0,
+        },
+        None,
+    );
 
     loop {
         let status = input
@@ -27,21 +35,22 @@ where
             break;
         } else if status == 1 {
             // uncompressed reset dict
-            parse_uncompressed(&mut decoder, input, true)?;
+            parse_uncompressed(&mut accum, input, true)?;
         } else if status == 2 {
             // uncompressed no reset
-            parse_uncompressed(&mut decoder, input, false)?;
+            parse_uncompressed(&mut accum, input, false)?;
         } else {
-            parse_lzma(&mut decoder, input, status)?;
+            parse_lzma(&mut accum, &mut decoder, input, status)?;
         }
     }
 
-    decoder.output.finish()?;
+    accum.finish()?;
     Ok(())
 }
 
 fn parse_lzma<R, W>(
-    decoder: &mut lzma::DecoderState<W, lzbuffer::LzAccumBuffer<W>>,
+    accum: &mut lzbuffer::LzAccumBuffer<W>,
+    decoder: &mut lzma::DecoderState,
     input: &mut R,
     status: u8,
 ) -> error::Result<()>
@@ -103,20 +112,16 @@ where
     );
 
     if reset_dict {
-        decoder.output.reset()?;
+        accum.reset()?;
     }
 
     if reset_state {
-        let lc: u32;
-        let lp: u32;
-        let mut pb: u32;
-
-        if reset_props {
+        let new_props = if reset_props {
             let props = input.read_u8().map_err(|e| {
                 error::Error::LzmaError(format!("LZMA2 expected new properties: {}", e))
             })?;
 
-            pb = props as u32;
+            let mut pb = props as u32;
             if pb >= 225 {
                 return Err(error::Error::LzmaError(format!(
                     "LZMA2 invalid properties: {} must be < 225",
@@ -124,9 +129,9 @@ where
                 )));
             }
 
-            lc = pb % 9;
+            let lc = pb % 9;
             pb /= 9;
-            lp = pb % 5;
+            let lp = pb % 5;
             pb /= 5;
 
             if lc + lp > 4 {
@@ -137,25 +142,24 @@ where
             }
 
             lzma_info!("Properties {{ lc: {}, lp: {}, pb: {} }}", lc, lp, pb);
+            LzmaProperties { lc, lp, pb }
         } else {
-            lc = decoder.lc;
-            lp = decoder.lp;
-            pb = decoder.pb;
-        }
+            decoder.lzma_props
+        };
 
-        decoder.reset_state(lc, lp, pb);
+        decoder.reset_state(new_props);
     }
 
-    decoder.set_unpacked_size(Some(unpacked_size + decoder.output.len() as u64));
+    decoder.set_unpacked_size(Some(unpacked_size + accum.len() as u64));
 
     let mut taken = input.take(packed_size);
     let mut rangecoder = rangecoder::RangeDecoder::new(&mut taken)
         .map_err(|e| error::Error::LzmaError(format!("LZMA input too short: {}", e)))?;
-    decoder.process(&mut rangecoder)
+    decoder.process(accum, &mut rangecoder)
 }
 
 fn parse_uncompressed<R, W>(
-    decoder: &mut lzma::DecoderState<W, lzbuffer::LzAccumBuffer<W>>,
+    accum: &mut lzbuffer::LzAccumBuffer<W>,
     input: &mut R,
     reset_dict: bool,
 ) -> error::Result<()>
@@ -175,7 +179,7 @@ where
     );
 
     if reset_dict {
-        decoder.output.reset()?;
+        accum.reset()?;
     }
 
     let mut buf = vec![0; unpacked_size];
@@ -185,7 +189,7 @@ where
             unpacked_size, e
         ))
     })?;
-    decoder.output.append_bytes(buf.as_slice());
+    accum.append_bytes(buf.as_slice());
 
     Ok(())
 }

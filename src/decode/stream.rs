@@ -1,5 +1,5 @@
 use crate::decode::lzbuffer::{LzBuffer, LzCircularBuffer};
-use crate::decode::lzma::{new_circular, new_circular_with_memlimit, DecoderState, LzmaParams};
+use crate::decode::lzma::{DecoderState, LzmaParams};
 use crate::decode::rangecoder::RangeDecoder;
 use crate::decompress::Options;
 use crate::error::Error;
@@ -41,9 +41,10 @@ struct RunState<W>
 where
     W: Write,
 {
-    decoder: DecoderState<W, LzCircularBuffer<W>>,
+    decoder: DecoderState,
     range: u32,
     code: u32,
+    output: LzCircularBuffer<W>,
 }
 
 impl<W> Debug for RunState<W>
@@ -98,7 +99,7 @@ where
     pub fn get_output(&self) -> Option<&W> {
         self.state.as_ref().map(|state| match state {
             State::Header(output) => &output,
-            State::Data(state) => state.decoder.output.get_output(),
+            State::Data(state) => state.output.get_output(),
         })
     }
 
@@ -106,7 +107,7 @@ where
     pub fn get_output_mut(&mut self) -> Option<&mut W> {
         self.state.as_mut().map(|state| match state {
             State::Header(output) => output,
-            State::Data(state) => state.decoder.output.get_output_mut(),
+            State::Data(state) => state.output.get_output_mut(),
         })
     }
 
@@ -130,9 +131,11 @@ where
                             Cursor::new(&self.tmp.get_ref()[0..self.tmp.position() as usize]);
                         let mut range_decoder =
                             RangeDecoder::from_parts(&mut stream, state.range, state.code);
-                        state.decoder.process(&mut range_decoder)?;
+                        state
+                            .decoder
+                            .process(&mut state.output, &mut range_decoder)?;
                     }
-                    let output = state.decoder.output.finish()?;
+                    let output = state.output.finish()?;
                     Ok(output)
                 }
             }
@@ -155,24 +158,25 @@ where
     ) -> crate::error::Result<State<W>> {
         match LzmaParams::read_header(&mut input, options) {
             Ok(params) => {
-                let decoder = if let Some(memlimit) = options.memlimit {
-                    new_circular_with_memlimit(output, params, memlimit)
-                } else {
-                    new_circular(output, params)
-                }?;
-
+                let decoder = DecoderState::new(params.properties, params.unpacked_size);
+                let output = LzCircularBuffer::from_stream(
+                    output,
+                    params.dict_size as usize,
+                    options.memlimit.unwrap_or(usize::MAX),
+                );
                 // The RangeDecoder is only kept temporarily as we are processing
                 // chunks of data.
                 if let Ok(rangecoder) = RangeDecoder::new(&mut input) {
                     Ok(State::Data(RunState {
                         decoder,
+                        output,
                         range: rangecoder.range,
                         code: rangecoder.code,
                     }))
                 } else {
                     // Failed to create a RangeDecoder because we need more data,
                     // try again later.
-                    Ok(State::Header(decoder.output.into_output()))
+                    Ok(State::Header(output.into_output()))
                 }
             }
             // Failed to read_header() because we need more data, try again later.
@@ -191,11 +195,12 @@ where
         // Try to process all bytes of data.
         state
             .decoder
-            .process_stream(&mut rangecoder)
+            .process_stream(&mut state.output, &mut rangecoder)
             .map_err(|e| -> io::Error { e.into() })?;
 
         Ok(RunState {
             decoder: state.decoder,
+            output: state.output,
             range: rangecoder.range,
             code: rangecoder.code,
         })
@@ -328,7 +333,7 @@ where
         if let Some(ref mut state) = self.state {
             match state {
                 State::Header(_) => Ok(()),
-                State::Data(state) => state.decoder.output.get_output_mut().flush(),
+                State::Data(state) => state.output.get_output_mut().flush(),
             }
         } else {
             Ok(())
