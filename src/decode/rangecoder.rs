@@ -151,7 +151,7 @@ where
 }
 
 // TODO: parametrize by constant and use [u16; 1 << num_bits] as soon as Rust supports this
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct BitTree {
     num_bits: usize,
     probs: Vec<u16>,
@@ -186,6 +186,7 @@ impl BitTree {
     }
 }
 
+#[derive(Debug)]
 pub struct LenDecoder {
     choice: u16,
     choice2: u16,

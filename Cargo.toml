@@ -23,6 +23,7 @@ rust-lzma = "0.5"
 [features]
 enable_logging = ["env_logger", "log"]
 stream = []
+raw_decoder = []
 
 [package.metadata.docs.rs]
-features = ["stream"]
+features = ["stream", "raw_decoder"]

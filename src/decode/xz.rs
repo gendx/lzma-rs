@@ -1,6 +1,6 @@
 //! Decoder for the `.xz` file format.
 
-use crate::decode::lzma2;
+use crate::decode::lzma2::Lzma2Decoder;
 use crate::decode::util;
 use crate::error;
 use crate::xz::{footer, header, CheckMethod, StreamFlags};
@@ -352,7 +352,7 @@ where
                 )));
             }
             // TODO: properties??
-            lzma2::decode_stream(&mut count_input, output)?;
+            Lzma2Decoder::new().decompress(&mut count_input, output)?;
             Ok(count_input.count())
         }
     }
