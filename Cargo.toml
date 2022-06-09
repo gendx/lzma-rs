@@ -27,3 +27,4 @@ raw_decoder = []
 
 [package.metadata.docs.rs]
 features = ["stream", "raw_decoder"]
+rustdoc-args = ["--cfg", "docsrs"]

@@ -1,5 +1,5 @@
 //! Pure-Rust codecs for LZMA, LZMA2, and XZ.
-
+#![cfg_attr(docsrs, feature(doc_cfg, doc_cfg_hide))]
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 #![forbid(unsafe_code)]
@@ -24,13 +24,17 @@ pub mod compress {
 /// Decompression helpers.
 pub mod decompress {
     pub use crate::decode::options::*;
+
     #[cfg(feature = "raw_decoder")]
+    #[cfg_attr(docsrs, doc(cfg(raw_decoder)))]
     pub mod raw {
         //! Raw decoding primitives for LZMA/LZMA2 streams.
         pub use crate::decode::lzma::{LzmaDecoder, LzmaParams, LzmaProperties};
         pub use crate::decode::lzma2::Lzma2Decoder;
     }
+
     #[cfg(feature = "stream")]
+    #[cfg_attr(docsrs, doc(cfg(stream)))]
     pub use crate::decode::stream::Stream;
 }
 
