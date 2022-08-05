@@ -18,8 +18,8 @@ where
     fn get_output(&self) -> &W;
     // Get a mutable reference to the output sink
     fn get_output_mut(&mut self) -> &mut W;
-    // Consumes this buffer and flushes any data
-    fn finish(self) -> io::Result<W>;
+    // Consumes this buffer and flushes any data, returning the output stream and the internal buffer.
+    fn finish(self) -> io::Result<(W, Vec<u8>)>;
     // Consumes this buffer without flushing any data
     fn into_output(self) -> W;
 }
@@ -39,10 +39,10 @@ impl<W> LzAccumBuffer<W>
 where
     W: io::Write,
 {
-    pub fn from_stream(stream: W, memlimit: usize) -> Self {
+    pub fn from_stream(stream: W, memlimit: usize, buf: Vec<u8>) -> Self {
         Self {
             stream,
-            buf: Vec::new(),
+            buf,
             memlimit,
             len: 0,
         }
@@ -142,10 +142,10 @@ where
     }
 
     // Consumes this buffer and flushes any data
-    fn finish(mut self) -> io::Result<W> {
+    fn finish(mut self) -> io::Result<(W, Vec<u8>)> {
         self.stream.write_all(self.buf.as_slice())?;
         self.stream.flush()?;
-        Ok(self.stream)
+        Ok((self.stream, self.buf))
     }
 
     // Consumes this buffer without flushing any data
@@ -171,11 +171,11 @@ impl<W> LzCircularBuffer<W>
 where
     W: io::Write,
 {
-    pub fn from_stream(stream: W, dict_size: usize, memlimit: usize) -> Self {
+    pub fn from_stream(stream: W, dict_size: usize, memlimit: usize, buf: Vec<u8>) -> Self {
         lzma_info!("Dict size in LZ buffer: {}", dict_size);
         Self {
             stream,
-            buf: Vec::new(),
+            buf,
             dict_size,
             memlimit,
             cursor: 0,
@@ -295,12 +295,12 @@ where
     }
 
     // Consumes this buffer and flushes any data
-    fn finish(mut self) -> io::Result<W> {
+    fn finish(mut self) -> io::Result<(W, Vec<u8>)> {
         if self.cursor > 0 {
             self.stream.write_all(&self.buf[0..self.cursor])?;
             self.stream.flush()?;
         }
-        Ok(self.stream)
+        Ok((self.stream, self.buf))
     }
 
     // Consumes this buffer without flushing any data

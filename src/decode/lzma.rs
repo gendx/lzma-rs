@@ -586,16 +586,29 @@ pub struct LzmaDecoder {
     params: LzmaParams,
     memlimit: usize,
     state: DecoderState,
+    buf: Vec<u8>,
 }
 
 impl LzmaDecoder {
     /// Creates a new object ready for decompressing data that it's given for the input
     /// dict size, expected unpacked data size, and memory limit for the internal buffer.
     pub fn new(params: LzmaParams, memlimit: Option<usize>) -> error::Result<LzmaDecoder> {
+        Self::new_with_buffer(params, memlimit, Vec::new())
+    }
+
+    /// Creates a new object ready for decompressing data that it's given for the input
+    /// dict size, expected unpacked data size, memory limit for the internal buffer, and
+    /// a pre-allocated buffer to use as the internal buffer.
+    pub fn new_with_buffer(
+        params: LzmaParams,
+        memlimit: Option<usize>,
+        buf: Vec<u8>,
+    ) -> error::Result<LzmaDecoder> {
         Ok(Self {
             params,
             memlimit: memlimit.unwrap_or(usize::MAX),
             state: DecoderState::new(params.properties, params.unpacked_size),
+            buf,
         })
     }
 
@@ -608,6 +621,7 @@ impl LzmaDecoder {
     #[cfg(feature = "raw_decoder")]
     pub fn reset(&mut self, unpacked_size: Option<Option<u64>>) {
         self.state.reset_state(self.params.properties);
+        self.buf.clear();
 
         if let Some(unpacked_size) = unpacked_size {
             self.state.set_unpacked_size(unpacked_size);
@@ -620,13 +634,20 @@ impl LzmaDecoder {
         input: &mut R,
         output: &mut W,
     ) -> error::Result<()> {
-        let mut output =
-            LzCircularBuffer::from_stream(output, self.params.dict_size as usize, self.memlimit);
+        let buf = std::mem::take(&mut self.buf);
+        let mut output = LzCircularBuffer::from_stream(
+            output,
+            self.params.dict_size as usize,
+            self.memlimit,
+            buf,
+        );
 
         let mut rangecoder = RangeDecoder::new(input)
             .map_err(|e| error::Error::LzmaError(format!("LZMA stream too short: {}", e)))?;
         self.state.process(&mut output, &mut rangecoder)?;
-        output.finish()?;
+
+        let (_, buf) = output.finish()?;
+        self.buf = buf;
         Ok(())
     }
 }

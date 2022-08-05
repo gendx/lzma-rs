@@ -12,11 +12,18 @@ use std::io::Read;
 /// Raw decoder for LZMA2.
 pub struct Lzma2Decoder {
     lzma_state: DecoderState,
+    buf: Vec<u8>,
 }
 
 impl Lzma2Decoder {
     /// Creates a new object ready for decompressing data that it's given.
     pub fn new() -> Lzma2Decoder {
+        Self::new_with_buffer(Vec::new())
+    }
+
+    /// Creates a new object ready for decompressing data that it's given with a pre-allocated
+    /// buffer for use as the internal buffer.
+    pub fn new_with_buffer(buf: Vec<u8>) -> Lzma2Decoder {
         Lzma2Decoder {
             lzma_state: DecoderState::new(
                 LzmaProperties {
@@ -26,6 +33,7 @@ impl Lzma2Decoder {
                 },
                 None,
             ),
+            buf,
         }
     }
 
@@ -39,6 +47,7 @@ impl Lzma2Decoder {
             lp: 0,
             pb: 0,
         });
+        self.buf.clear();
     }
 
     /// Decompresses the input data into the output, consuming only as much input as needed and writing as much output as possible.
@@ -47,7 +56,8 @@ impl Lzma2Decoder {
         input: &mut R,
         output: &mut W,
     ) -> error::Result<()> {
-        let mut accum = lzbuffer::LzAccumBuffer::from_stream(output, usize::MAX);
+        let buf = std::mem::take(&mut self.buf);
+        let mut accum = lzbuffer::LzAccumBuffer::from_stream(output, usize::MAX, buf);
 
         loop {
             let status = input.read_u8().map_err(|e| {
@@ -70,7 +80,8 @@ impl Lzma2Decoder {
             }
         }
 
-        accum.finish()?;
+        let (_, buf) = accum.finish()?;
+        self.buf = buf;
         Ok(())
     }
 

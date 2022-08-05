@@ -136,7 +136,7 @@ where
                             .decoder
                             .process(&mut state.output, &mut range_decoder)?;
                     }
-                    let output = state.output.finish()?;
+                    let (output, _) = state.output.finish()?;
                     Ok(output)
                 }
             }
@@ -164,6 +164,7 @@ where
                     output,
                     params.dict_size as usize,
                     options.memlimit.unwrap_or(usize::MAX),
+                    Vec::new(),
                 );
                 // The RangeDecoder is only kept temporarily as we are processing
                 // chunks of data.
