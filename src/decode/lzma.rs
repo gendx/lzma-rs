@@ -1,11 +1,11 @@
-use crate::decode::lzbuffer::LzBuffer;
+use crate::decode::lzbuffer::{LzBuffer, LzCircularBuffer};
 use crate::decode::rangecoder;
+use crate::decode::rangecoder::RangeDecoder;
+use crate::decompress::Options;
+use crate::decompress::UnpackedSize;
 use crate::error;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io;
-
-use crate::decompress::Options;
-use crate::decompress::UnpackedSize;
 
 /// Maximum input data that can be processed in one iteration.
 /// Libhtp uses the following equation to define the maximum number of bits
@@ -37,7 +37,7 @@ enum ProcessingStatus {
     Finished,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 /// LZMA 'lclppb' decompression properties.
 pub struct LzmaProperties {
     /// The number of literal context bits.
@@ -65,14 +65,33 @@ impl LzmaProperties {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 /// LZMA decompression parameters.
 pub struct LzmaParams {
-    pub properties: LzmaProperties,
-    pub dict_size: u32,
-    pub unpacked_size: Option<u64>,
+    /// The LZMA 'lclppb' decompression properties.
+    pub(crate) properties: LzmaProperties,
+    /// The dictionary size to use when decompressing.
+    pub(crate) dict_size: u32,
+    /// The size of the unpacked data.
+    pub(crate) unpacked_size: Option<u64>,
 }
 
 impl LzmaParams {
+    /// Create an new instance of LZMA parameters.
+    #[cfg(feature = "raw_decoder")]
+    pub fn new(
+        properties: LzmaProperties,
+        dict_size: u32,
+        unpacked_size: Option<u64>,
+    ) -> LzmaParams {
+        Self {
+            properties,
+            dict_size,
+            unpacked_size,
+        }
+    }
+
+    /// Read LZMA parameters from the LZMA stream header.
     pub fn read_header<R>(input: &mut R, options: &Options) -> error::Result<LzmaParams>
     where
         R: io::BufRead,
@@ -141,6 +160,7 @@ impl LzmaParams {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct DecoderState {
     // Buffer input data here if we need more for decompression. Up to
     // MAX_REQUIRED_INPUT bytes can be consumed during one iteration.
@@ -557,5 +577,56 @@ impl DecoderState {
         }
 
         Ok(result)
+    }
+}
+
+#[derive(Debug)]
+/// Raw decoder for LZMA.
+pub struct LzmaDecoder {
+    params: LzmaParams,
+    memlimit: usize,
+    state: DecoderState,
+}
+
+impl LzmaDecoder {
+    /// Creates a new object ready for decompressing data that it's given for the input
+    /// dict size, expected unpacked data size, and memory limit for the internal buffer.
+    pub fn new(params: LzmaParams, memlimit: Option<usize>) -> error::Result<LzmaDecoder> {
+        Ok(Self {
+            params,
+            memlimit: memlimit.unwrap_or(usize::MAX),
+            state: DecoderState::new(params.properties, params.unpacked_size),
+        })
+    }
+
+    /// Performs the equivalent of replacing this decompression state with a freshly allocated copy.
+    ///
+    /// Because the decoder state is reset, the unpacked size may optionally be re-specified. If `None`
+    /// is given, the previous unpacked size that the decoder was initialized with remains unchanged.
+    ///
+    /// This function may not allocate memory and will attempt to reuse any previously allocated resources.
+    #[cfg(feature = "raw_decoder")]
+    pub fn reset(&mut self, unpacked_size: Option<Option<u64>>) {
+        self.state.reset_state(self.params.properties);
+
+        if let Some(unpacked_size) = unpacked_size {
+            self.state.set_unpacked_size(unpacked_size);
+        }
+    }
+
+    /// Decompresses the input data into the output, consuming only as much input as needed and writing as much output as possible.
+    pub fn decompress<W: io::Write, R: io::BufRead>(
+        &mut self,
+        input: &mut R,
+        output: &mut W,
+    ) -> error::Result<()> {
+        let mut output =
+            LzCircularBuffer::from_stream(output, self.params.dict_size as usize, self.memlimit);
+
+        let mut rangecoder = RangeDecoder::new(input)
+            .map_err(|e| error::Error::LzmaError(format!("LZMA stream too short: {}", e)))?;
+        self.state.process(&mut output, &mut rangecoder)?;
+        output.finish()?;
+        Ok(())
     }
 }

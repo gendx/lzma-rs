@@ -1,5 +1,5 @@
 //! Pure-Rust codecs for LZMA, LZMA2, and XZ.
-
+#![cfg_attr(docsrs, feature(doc_cfg, doc_cfg_hide))]
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 #![forbid(unsafe_code)]
@@ -14,7 +14,6 @@ pub mod error;
 
 mod xz;
 
-use crate::decode::lzbuffer::{LzBuffer, LzCircularBuffer};
 use std::io;
 
 /// Compression helpers.
@@ -25,7 +24,17 @@ pub mod compress {
 /// Decompression helpers.
 pub mod decompress {
     pub use crate::decode::options::*;
+
+    #[cfg(feature = "raw_decoder")]
+    #[cfg_attr(docsrs, doc(cfg(raw_decoder)))]
+    pub mod raw {
+        //! Raw decoding primitives for LZMA/LZMA2 streams.
+        pub use crate::decode::lzma::{LzmaDecoder, LzmaParams, LzmaProperties};
+        pub use crate::decode::lzma2::Lzma2Decoder;
+    }
+
     #[cfg(feature = "stream")]
+    #[cfg_attr(docsrs, doc(cfg(stream)))]
     pub use crate::decode::stream::Stream;
 }
 
@@ -44,18 +53,8 @@ pub fn lzma_decompress_with_options<R: io::BufRead, W: io::Write>(
     options: &decompress::Options,
 ) -> error::Result<()> {
     let params = decode::lzma::LzmaParams::read_header(input, options)?;
-    let mut decoder = decode::lzma::DecoderState::new(params.properties, params.unpacked_size);
-    let mut output = LzCircularBuffer::from_stream(
-        output,
-        params.dict_size as usize,
-        options.memlimit.unwrap_or(usize::MAX),
-    );
-
-    let mut rangecoder = decode::rangecoder::RangeDecoder::new(input)
-        .map_err(|e| error::Error::LzmaError(format!("LZMA stream too short: {}", e)))?;
-    decoder.process(&mut output, &mut rangecoder)?;
-    output.finish()?;
-    Ok(())
+    let mut decoder = decode::lzma::LzmaDecoder::new(params, options.memlimit)?;
+    decoder.decompress(input, output)
 }
 
 /// Compresses data with LZMA and default [`Options`](compress/struct.Options.html).
@@ -81,7 +80,7 @@ pub fn lzma2_decompress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
 ) -> error::Result<()> {
-    decode::lzma2::decode_stream(input, output)
+    decode::lzma2::Lzma2Decoder::new().decompress(input, output)
 }
 
 /// Compress data with LZMA2 and default [`Options`](compress/struct.Options.html).
