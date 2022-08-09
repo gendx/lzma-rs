@@ -1,36 +1,34 @@
-use std::{hash, io};
+use std::io;
 
 // A Write computing a digest on the bytes written.
-pub struct HasherWrite<'a, W, H>
+pub struct CrcDigestWrite<'a, 'b, W, S>
 where
     W: 'a + io::Write,
-    H: 'a + hash::Hasher,
+    S: crc::Width,
 {
-    write: &'a mut W,  // underlying writer
-    hasher: &'a mut H, // hasher
+    write: &'a mut W,                   // underlying writer
+    digest: &'a mut crc::Digest<'b, S>, // hasher
 }
 
-impl<'a, W, H> HasherWrite<'a, W, H>
+impl<'a, 'b, W, S> CrcDigestWrite<'a, 'b, W, S>
 where
     W: io::Write,
-    H: hash::Hasher,
+    S: crc::Width,
 {
-    pub fn new(write: &'a mut W, hasher: &'a mut H) -> Self {
-        Self { write, hasher }
+    pub fn new(write: &'a mut W, digest: &'a mut crc::Digest<'b, S>) -> Self {
+        Self { write, digest }
     }
 }
 
-impl<'a, W, H> io::Write for HasherWrite<'a, W, H>
+impl<'a, 'b, W> io::Write for CrcDigestWrite<'a, 'b, W, u32>
 where
     W: io::Write,
-    H: hash::Hasher,
 {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let result = self.write.write(buf)?;
-        self.hasher.write(&buf[..result]);
+        self.digest.update(&buf[..result]);
         Ok(result)
     }
-
     fn flush(&mut self) -> io::Result<()> {
         self.write.flush()
     }

@@ -1,8 +1,8 @@
 use crate::decode;
 use crate::encode::{lzma2, util};
+use crate::xz::crc::CRC32;
 use crate::xz::{footer, header, CheckMethod, StreamFlags};
 use byteorder::{LittleEndian, WriteBytesExt};
-use crc::{crc32, Hasher32};
 use std::io;
 use std::io::Write;
 
@@ -33,12 +33,12 @@ where
     W: io::Write,
 {
     output.write_all(header::XZ_MAGIC)?;
-    let mut digest = crc32::Digest::new(crc32::IEEE);
+    let mut digest = CRC32.digest();
     {
-        let mut digested = util::HasherWrite::new(output, &mut digest);
+        let mut digested = util::CrcDigestWrite::new(output, &mut digest);
         stream_flags.serialize(&mut digested)?;
     }
-    let crc32 = digest.sum32();
+    let crc32 = digest.finalize();
     output.write_u32::<LittleEndian>(crc32)?;
     Ok(())
 }
@@ -47,16 +47,16 @@ fn write_footer<W>(output: &mut W, stream_flags: StreamFlags, index_size: usize)
 where
     W: io::Write,
 {
-    let mut digest = crc32::Digest::new(crc32::IEEE);
+    let mut digest = CRC32.digest();
     let mut footer_buf: Vec<u8> = Vec::new();
     {
-        let mut digested = util::HasherWrite::new(&mut footer_buf, &mut digest);
+        let mut digested = util::CrcDigestWrite::new(&mut footer_buf, &mut digest);
 
         let backward_size = (index_size >> 2) - 1;
         digested.write_u32::<LittleEndian>(backward_size as u32)?;
         stream_flags.serialize(&mut digested)?;
     }
-    let crc32 = digest.sum32();
+    let crc32 = digest.finalize();
     output.write_u32::<LittleEndian>(crc32)?;
     output.write_all(footer_buf.as_slice())?;
 
@@ -73,9 +73,9 @@ where
         let mut count_output = util::CountWrite::new(output);
 
         // Block header
-        let mut digest = crc32::Digest::new(crc32::IEEE);
+        let mut digest = CRC32.digest();
         {
-            let mut digested = util::HasherWrite::new(&mut count_output, &mut digest);
+            let mut digested = util::CrcDigestWrite::new(&mut count_output, &mut digest);
             let header_size = 8;
             digested.write_u8((header_size >> 2) as u8)?;
             let flags = 0x00; // 1 filter, no (un)packed size provided
@@ -89,7 +89,7 @@ where
             let padding = [0, 0, 0];
             digested.write_all(&padding)?;
         }
-        let crc32 = digest.sum32();
+        let crc32 = digest.finalize();
         count_output.write_u32::<LittleEndian>(crc32)?;
 
         // Block
@@ -117,9 +117,9 @@ where
 {
     let mut count_output = util::CountWrite::new(output);
 
-    let mut digest = crc32::Digest::new(crc32::IEEE);
+    let mut digest = CRC32.digest();
     {
-        let mut digested = util::HasherWrite::new(&mut count_output, &mut digest);
+        let mut digested = util::CrcDigestWrite::new(&mut count_output, &mut digest);
         digested.write_u8(0)?; // No more block
         let num_records = 1;
         write_multibyte(&mut digested, num_records)?;
@@ -132,12 +132,12 @@ where
     let count = count_output.count();
     let padding_size = ((count ^ 0x03) + 1) & 0x03;
     {
-        let mut digested = util::HasherWrite::new(&mut count_output, &mut digest);
+        let mut digested = util::CrcDigestWrite::new(&mut count_output, &mut digest);
         let padding = vec![0; padding_size];
         digested.write_all(padding.as_slice())?;
     }
 
-    let crc32 = digest.sum32();
+    let crc32 = digest.finalize();
     count_output.write_u32::<LittleEndian>(crc32)?;
 
     Ok(count_output.count())

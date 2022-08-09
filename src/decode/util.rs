@@ -1,4 +1,4 @@
-use std::{hash, io};
+use std::io;
 
 pub fn read_tag<R: io::BufRead>(input: &mut R, tag: &[u8]) -> io::Result<bool> {
     let mut buf = vec![0; tag.len()];
@@ -34,33 +34,32 @@ pub fn flush_zero_padding<R: io::BufRead>(input: &mut R) -> io::Result<bool> {
 }
 
 // A Read computing a digest on the bytes read.
-pub struct HasherRead<'a, R, H>
+pub struct CrcDigestRead<'a, 'b, R, S>
 where
     R: 'a + io::Read,
-    H: 'a + hash::Hasher,
+    S: crc::Width,
 {
-    read: &'a mut R,   // underlying reader
-    hasher: &'a mut H, // hasher
+    read: &'a mut R,                    // underlying reader
+    digest: &'a mut crc::Digest<'b, S>, // hasher
 }
 
-impl<'a, R, H> HasherRead<'a, R, H>
+impl<'a, 'b, R, S> CrcDigestRead<'a, 'b, R, S>
 where
     R: io::Read,
-    H: hash::Hasher,
+    S: crc::Width,
 {
-    pub fn new(read: &'a mut R, hasher: &'a mut H) -> Self {
-        Self { read, hasher }
+    pub fn new(read: &'a mut R, digest: &'a mut crc::Digest<'b, S>) -> Self {
+        Self { read, digest }
     }
 }
 
-impl<'a, R, H> io::Read for HasherRead<'a, R, H>
+impl<'a, 'b, R> io::Read for CrcDigestRead<'a, 'b, R, u32>
 where
     R: io::Read,
-    H: hash::Hasher,
 {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let result = self.read.read(buf)?;
-        self.hasher.write(&buf[..result]);
+        self.digest.update(&buf[..result]);
         Ok(result)
     }
 }
