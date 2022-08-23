@@ -7,11 +7,7 @@ jobs:
       RUSTFLAGS: "-D warnings"
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
+      - uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo fuzz
         run: cargo install cargo-fuzz
       - name: Build fuzz targets

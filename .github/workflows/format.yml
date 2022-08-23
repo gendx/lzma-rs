@@ -1,0 +1,15 @@
+on: [push, pull_request]
+name: Formatting on stable toolchain
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check formatting
+        run: cargo fmt -- --check
+      - name: Check formatting on fuzzing
+        run: cargo fmt --manifest-path fuzz/Cargo.toml -- --check

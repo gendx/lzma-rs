@@ -18,28 +18,15 @@ jobs:
       RUSTFLAGS: "-D warnings"
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ matrix.rust }}
-          override: true
+
       - name: Build with default features
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose
+        run: cargo build --verbose
       - name: Tests with default features
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --verbose
+        run: cargo test --verbose
       - name: Build with all features
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --all-features --verbose
+        run: cargo build --all-features --verbose
       - name: Tests with all features
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features --verbose
+        run: cargo test --all-features --verbose
