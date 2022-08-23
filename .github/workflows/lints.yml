@@ -1,43 +1,19 @@
 on: [push, pull_request]
 name: Lints on stable toolchain
 jobs:
-  lints:
+  clippy:
     runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: "-D warnings"
     steps:
       - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          components: rustfmt, clippy
-
-      - name: Check formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: -- --check
-
-      - name: Check formatting on fuzzing
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --manifest-path fuzz/Cargo.toml -- --check
+          components: clippy
 
       - name: Check Clippy lints
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings -W clippy::match-same-arms
-
+        run: cargo clippy -- -W clippy::match-same-arms
       - name: Check Clippy lints on tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --tests -- -D warnings -W clippy::match-same-arms
-
+        run: cargo clippy --tests -- -W clippy::match-same-arms
       - name: Check Clippy lints on fuzzing
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --manifest-path fuzz/Cargo.toml -- -D warnings -W clippy::match-same-arms
+        run: cargo clippy --manifest-path fuzz/Cargo.toml -- -W clippy::match-same-arms
