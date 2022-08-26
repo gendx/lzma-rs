@@ -3,10 +3,9 @@
 use crate::decode::lzma2::Lzma2Decoder;
 use crate::decode::util;
 use crate::error;
+use crate::xz::crc::{CRC32, CRC64};
 use crate::xz::{footer, header, CheckMethod, StreamFlags};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use crc::{crc32, crc64, Hasher32};
-use std::hash::Hasher;
 use std::io;
 use std::io::Read;
 
@@ -46,11 +45,9 @@ where
     };
 
     let crc32 = input.read_u32::<LittleEndian>()?;
-    let mut digest = crc32::Digest::new(crc32::IEEE);
-
+    let mut digest = CRC32.digest();
     {
-        let mut digested = util::HasherRead::new(input, &mut digest);
-
+        let mut digested = util::CrcDigestRead::new(input, &mut digest);
         let backward_size = digested.read_u32::<LittleEndian>()?;
         if index_size as u32 != (backward_size + 1) << 2 {
             return Err(error::Error::XzError(format!(
@@ -73,7 +70,7 @@ where
         }
     }
 
-    let digest_crc32 = digest.sum32();
+    let digest_crc32 = digest.finalize();
     if crc32 != digest_crc32 {
         return Err(error::Error::XzError(format!(
             "Invalid footer CRC32: expected 0x{:08x} but got 0x{:08x}",
@@ -103,12 +100,11 @@ fn check_index<'a, R>(
 where
     R: io::BufRead,
 {
-    let mut digest = crc32::Digest::new(crc32::IEEE);
+    let mut digest = CRC32.digest();
     let index_tag = 0u8;
-    digest.write_u8(index_tag);
-
+    digest.update(&[index_tag]);
     {
-        let mut digested = util::HasherRead::new(count_input, &mut digest);
+        let mut digested = util::CrcDigestRead::new(count_input, &mut digest);
 
         let num_records = get_multibyte(&mut digested)?;
         if num_records != records.len() as u64 {
@@ -138,8 +134,7 @@ where
                 )));
             }
         }
-    }
-
+    };
     // TODO: create padding parser function
     let count = count_input.count();
     let padding_size = ((count ^ 0x03) + 1) & 0x03;
@@ -150,7 +145,7 @@ where
     );
 
     {
-        let mut digested = util::HasherRead::new(count_input, &mut digest);
+        let mut digested = util::CrcDigestRead::new(count_input, &mut digest);
         for _ in 0..padding_size {
             let byte = digested.read_u8()?;
             if byte != 0 {
@@ -159,9 +154,9 @@ where
                 ));
             }
         }
-    }
+    };
 
-    let digest_crc32 = digest.sum32();
+    let digest_crc32 = digest.finalize();
     lzma_info!("XZ index checking digest 0x{:08x}", digest_crc32);
 
     let crc32 = count_input.read_u32::<LittleEndian>()?;
@@ -209,18 +204,18 @@ where
     R: io::BufRead,
     W: io::Write,
 {
-    let mut digest = crc32::Digest::new(crc32::IEEE);
-    digest.write_u8(header_size);
+    let mut digest = CRC32.digest();
+    digest.update(&[header_size]);
     let header_size = ((header_size as u64) << 2) - 1;
 
     let block_header = {
         let mut taken = count_input.take(header_size);
-        let mut digested = io::BufReader::new(util::HasherRead::new(&mut taken, &mut digest));
+        let mut digested = io::BufReader::new(util::CrcDigestRead::new(&mut taken, &mut digest));
         read_block_header(&mut digested, header_size)?
     };
 
     let crc32 = count_input.read_u32::<LittleEndian>()?;
-    let digest_crc32 = digest.sum32();
+    let digest_crc32 = digest.finalize();
     if crc32 != digest_crc32 {
         return Err(error::Error::XzError(format!(
             "Invalid header CRC32: expected 0x{:08x} but got 0x{:08x}",
@@ -309,7 +304,7 @@ where
         CheckMethod::None => (),
         CheckMethod::Crc32 => {
             let crc32 = input.read_u32::<LittleEndian>()?;
-            let digest_crc32 = crc32::checksum_ieee(buf);
+            let digest_crc32 = CRC32.checksum(buf);
             if crc32 != digest_crc32 {
                 return Err(error::Error::XzError(format!(
                     "Invalid block CRC32, expected 0x{:08x} but got 0x{:08x}",
@@ -319,7 +314,7 @@ where
         }
         CheckMethod::Crc64 => {
             let crc64 = input.read_u64::<LittleEndian>()?;
-            let digest_crc64 = crc64::checksum_ecma(buf);
+            let digest_crc64 = CRC64.checksum(buf);
             if crc64 != digest_crc64 {
                 return Err(error::Error::XzError(format!(
                     "Invalid block CRC64, expected 0x{:016x} but got 0x{:016x}",

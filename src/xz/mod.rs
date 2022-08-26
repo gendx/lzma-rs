@@ -7,6 +7,7 @@
 use crate::error;
 use std::io;
 
+pub(crate) mod crc;
 pub(crate) mod footer;
 pub(crate) mod header;
 

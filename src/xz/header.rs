@@ -2,9 +2,9 @@
 
 use crate::decode::util;
 use crate::error;
+use crate::xz::crc::CRC32;
 use crate::xz::StreamFlags;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use crc::crc32::{self, Hasher32};
 
 /// File format magic header signature, see sect. 2.1.1.1.
 pub(crate) const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00];
@@ -29,10 +29,10 @@ impl StreamHeader {
         }
 
         let (flags, digested) = {
-            let mut digest = crc32::Digest::new(crc32::IEEE);
-            let mut digest_rd = util::HasherRead::new(input, &mut digest);
-            let value = digest_rd.read_u16::<BigEndian>()?;
-            (value, digest.sum32())
+            let mut digest = CRC32.digest();
+            let mut digest_rd = util::CrcDigestRead::new(input, &mut digest);
+            let flags = digest_rd.read_u16::<BigEndian>()?;
+            (flags, digest.finalize())
         };
 
         let crc32 = input.read_u32::<LittleEndian>()?;
