@@ -1,5 +1,4 @@
-use std::hash;
-use std::io;
+use std::{hash, io};
 
 pub fn read_tag<R: io::BufRead>(input: &mut R, tag: &[u8]) -> io::Result<bool> {
     let mut buf = vec![0; tag.len()];

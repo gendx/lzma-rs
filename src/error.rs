@@ -1,8 +1,7 @@
 //! Error handling.
 
 use std::fmt::Display;
-use std::io;
-use std::result;
+use std::{io, result};
 
 /// Library errors.
 #[derive(Debug)]

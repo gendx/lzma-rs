@@ -1,5 +1,4 @@
-use std::hash;
-use std::io;
+use std::{hash, io};
 
 // A Write computing a digest on the bytes written.
 pub struct HasherWrite<'a, W, H>
