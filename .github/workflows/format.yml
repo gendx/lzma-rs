@@ -1,11 +1,11 @@
 on: [push, pull_request]
-name: Formatting on stable toolchain
+name: Formatting on nightly toolchain
 jobs:
   format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
 

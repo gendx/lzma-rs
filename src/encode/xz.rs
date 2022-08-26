@@ -1,6 +1,5 @@
 use crate::decode;
-use crate::encode::lzma2;
-use crate::encode::util;
+use crate::encode::{lzma2, util};
 use crate::xz::{footer, header, CheckMethod, StreamFlags};
 use byteorder::{LittleEndian, WriteBytesExt};
 use crc::{crc32, Hasher32};

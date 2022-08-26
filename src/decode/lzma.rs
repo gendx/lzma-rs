@@ -1,8 +1,7 @@
 use crate::decode::lzbuffer::{LzBuffer, LzCircularBuffer};
 use crate::decode::rangecoder;
 use crate::decode::rangecoder::RangeDecoder;
-use crate::decompress::Options;
-use crate::decompress::UnpackedSize;
+use crate::decompress::{Options, UnpackedSize};
 use crate::error;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::io;
