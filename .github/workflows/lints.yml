@@ -5,6 +5,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RUSTFLAGS: "-D warnings"
+      CARGO_UNSTABLE_SPARSE_REGISTRY: true
     steps:
       - uses: actions/checkout@v2
       - uses: dtolnay/rust-toolchain@stable
@@ -12,8 +13,8 @@ jobs:
           components: clippy
 
       - name: Check Clippy lints
-        run: cargo clippy -- -W clippy::match-same-arms
+        run: cargo clippy --verbose -- -W clippy::match-same-arms
       - name: Check Clippy lints on tests
-        run: cargo clippy --tests -- -W clippy::match-same-arms
+        run: cargo clippy --verbose --tests -- -W clippy::match-same-arms
       - name: Check Clippy lints on fuzzing
-        run: cargo clippy --manifest-path fuzz/Cargo.toml -- -W clippy::match-same-arms
+        run: cargo clippy --verbose --manifest-path fuzz/Cargo.toml -- -W clippy::match-same-arms
