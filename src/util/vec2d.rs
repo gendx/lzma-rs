@@ -92,7 +92,7 @@ mod test {
     }
 
     #[test]
-    fn index_mut() {
+    fn indexmut() {
         let mut vec2d = Vec2D {
             data: vec![0, 1, 2, 3, 4, 5, 6, 7].into_boxed_slice(),
             cols: 2,
@@ -100,7 +100,7 @@ mod test {
 
         vec2d[1][1] = 9;
         assert_eq!(vec2d[0], [0, 1]);
-        // 1,1 should be 9.
+        // (1, 1) should be 9.
         assert_eq!(vec2d[1], [2, 9]);
         assert_eq!(vec2d[2], [4, 5]);
         assert_eq!(vec2d[3], [6, 7]);
@@ -122,14 +122,14 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn column_out_of_bounds() {
+    fn index_column_out_of_bounds() {
         let vec2d = Vec2D::init(1, (2, 3));
         let _x = vec2d[0][3];
     }
 
     #[test]
     #[should_panic]
-    fn row_out_of_bounds() {
+    fn index_row_out_of_bounds() {
         let vec2d = Vec2D::init(1, (2, 3));
         let _x = vec2d[2][0];
     }
@@ -173,21 +173,21 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn mut_column_out_of_bounds() {
+    fn indexmut_column_out_of_bounds() {
         let mut vec2d = Vec2D::init(1, (2, 3));
         vec2d[0][3] = 0;
     }
 
     #[test]
     #[should_panic]
-    fn mut_row_out_of_bounds() {
+    fn indexmut_row_out_of_bounds() {
         let mut vec2d = Vec2D::init(1, (2, 3));
         vec2d[2][0] = 0;
     }
 
     #[test]
     #[should_panic]
-    fn index_mut_mul_overflow() {
+    fn indexmut_mul_overflow() {
         // Matrix with 4 columns.
         let mut matrix = Vec2D::init(0, (3, 4));
         // 2^{usize.numbits() - 2}.
@@ -198,7 +198,7 @@ mod test {
 
     #[test]
     #[should_panic]
-    fn index_mut_add_overflow() {
+    fn indexmut_add_overflow() {
         // Matrix with 5 columns.
         let mut matrix = Vec2D::init(0, (3, 5));
         // Somehow, as long as numbits(usize) is a multiple of 4, then 5 divides usize::MAX.
