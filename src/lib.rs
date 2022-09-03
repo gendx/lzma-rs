@@ -12,6 +12,7 @@ mod encode;
 
 pub mod error;
 
+mod util;
 mod xz;
 
 use std::io;
