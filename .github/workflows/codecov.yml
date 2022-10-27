@@ -1,0 +1,21 @@
+on: [push, pull_request]
+name: Code coverage
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - name: Code coverage for tests with default features
+        run: cargo test --verbose
+        env:
+          CARGO_INCREMENTAL: '0'
+          RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      - name: rust-grcov
+        uses: actions-rs/grcov@v0.1.5
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v3.1.0
+        with:
+          verbose: true
+          fail_ci_if_error: true
