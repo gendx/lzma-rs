@@ -17,6 +17,8 @@ mod xz;
 
 use std::io;
 
+use decompress::Options;
+
 /// Compression helpers.
 pub mod compress {
     pub use crate::encode::options::*;
@@ -54,7 +56,7 @@ pub fn lzma_decompress_with_options<R: io::BufRead, W: io::Write>(
     options: &decompress::Options,
 ) -> error::Result<()> {
     let params = decode::lzma::LzmaParams::read_header(input, options)?;
-    let mut decoder = decode::lzma::LzmaDecoder::new(params, options.memlimit)?;
+    let mut decoder = decode::lzma::LzmaDecoder::new(params, options.memlimit, options.clone())?;
     decoder.decompress(input, output)
 }
 
@@ -80,8 +82,9 @@ pub fn lzma_compress_with_options<R: io::BufRead, W: io::Write>(
 pub fn lzma2_decompress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
+    decoder_options: decompress::Options,
 ) -> error::Result<()> {
-    decode::lzma2::Lzma2Decoder::new().decompress(input, output)
+    decode::lzma2::Lzma2Decoder::new(decoder_options).decompress(input, output)
 }
 
 /// Compress data with LZMA2 and default [`Options`](compress/struct.Options.html).
@@ -96,8 +99,9 @@ pub fn lzma2_compress<R: io::BufRead, W: io::Write>(
 pub fn xz_decompress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
+    decoder_options: Options,
 ) -> error::Result<()> {
-    decode::xz::decode_stream(input, output)
+    decode::xz::decode_stream(input, output, decoder_options)
 }
 
 /// Compress data with XZ and default [`Options`](compress/struct.Options.html).
