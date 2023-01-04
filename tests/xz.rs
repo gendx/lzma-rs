@@ -9,7 +9,7 @@ fn read_all_file(filename: &str) -> std::io::Result<Vec<u8>> {
     Ok(data)
 }
 
-fn round_trip(x: &[u8]) {
+fn round_trip(x: &[u8], decoder_options: lzma_rs::decompress::Options) {
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::xz_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
     #[cfg(feature = "enable_logging")]
@@ -18,44 +18,48 @@ fn round_trip(x: &[u8]) {
     debug!("Compressed content: {:?}", compressed);
     let mut bf = BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::xz_decompress(&mut bf, &mut decomp).unwrap();
+    lzma_rs::xz_decompress(&mut bf, &mut decomp, decoder_options.clone()).unwrap();
     assert_eq!(decomp, x)
 }
 
-fn round_trip_file(filename: &str) {
+fn round_trip_file(filename: &str, decoder_options: lzma_rs::decompress::Options) {
     let x = read_all_file(filename).unwrap();
-    round_trip(x.as_slice());
+    round_trip(x.as_slice(), decoder_options);
 }
 
 #[test]
 fn round_trip_basics() {
+    let options = lzma_rs::decompress::Options::default();
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
-    round_trip(b"");
+    round_trip(b"", options.clone());
     // Note: we use vec! to avoid storing the slice in the binary
-    round_trip(vec![0x00; 1_000_000].as_slice());
-    round_trip(vec![0xFF; 1_000_000].as_slice());
+    round_trip(vec![0x00; 1_000_000].as_slice(), options.clone());
+    round_trip(vec![0xFF; 1_000_000].as_slice(), options);
 }
 
 #[test]
 fn round_trip_hello() {
+    let options = lzma_rs::decompress::Options::default();
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
-    round_trip(b"Hello world");
+    round_trip(b"Hello world", options);
 }
 
 #[test]
 fn round_trip_files() {
+    let options = lzma_rs::decompress::Options::default();
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
-    round_trip_file("tests/files/foo.txt");
+    round_trip_file("tests/files/foo.txt", options);
 }
 
 fn decomp_big_file(compfile: &str, plainfile: &str) {
+    let options = lzma_rs::decompress::Options::default();
     let expected = read_all_file(plainfile).unwrap();
     let mut f = BufReader::new(std::fs::File::open(compfile).unwrap());
     let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::xz_decompress(&mut f, &mut decomp).unwrap();
+    lzma_rs::xz_decompress(&mut f, &mut decomp, options.clone()).unwrap();
     assert!(decomp == expected)
 }
 
@@ -84,18 +88,20 @@ fn big_file() {
 
 #[test]
 fn decompress_empty_world() {
+    let options = lzma_rs::decompress::Options::default();
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     let mut x: &[u8] = b"\xfd\x37\x7a\x58\x5a\x00\x00\x04\xe6\xd6\xb4\x46\x00\x00\x00\x00\
                          \x1c\xdf\x44\x21\x1f\xb6\xf3\x7d\x01\x00\x00\x00\x00\x04\x59\x5a\
                          ";
     let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::xz_decompress(&mut x, &mut decomp).unwrap();
+    lzma_rs::xz_decompress(&mut x, &mut decomp, options).unwrap();
     assert_eq!(decomp, b"")
 }
 
 #[test]
 fn decompress_hello_world() {
+    let options = lzma_rs::decompress::Options::default();
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
     let mut x: &[u8] = b"\xfd\x37\x7a\x58\x5a\x00\x00\x04\xe6\xd6\xb4\x46\x02\x00\x21\x01\
@@ -104,7 +110,7 @@ fn decompress_hello_world() {
                          \x00\x01\x24\x0c\xa6\x18\xd8\xd8\x1f\xb6\xf3\x7d\x01\x00\x00\x00\
                          \x00\x04\x59\x5a";
     let mut decomp: Vec<u8> = Vec::new();
-    lzma_rs::xz_decompress(&mut x, &mut decomp).unwrap();
+    lzma_rs::xz_decompress(&mut x, &mut decomp, options).unwrap();
     assert_eq!(decomp, b"Hello world\x0a")
 }
 
@@ -121,6 +127,7 @@ fn test_xz_block_check_crc32() {
 
 #[test]
 fn test_xz_block_check_crc32_invalid() {
+    let options = lzma_rs::decompress::Options::default();
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
 
@@ -136,7 +143,7 @@ fn test_xz_block_check_crc32_invalid() {
     };
     let mut decomp = Vec::new();
 
-    let err_msg = lzma_rs::xz_decompress(&mut corrupted, &mut decomp)
+    let err_msg = lzma_rs::xz_decompress(&mut corrupted, &mut decomp, options)
         .unwrap_err()
         .to_string();
     assert_eq!(

@@ -165,6 +165,7 @@ pub(crate) struct DecoderState {
     // MAX_REQUIRED_INPUT bytes can be consumed during one iteration.
     partial_input_buf: std::io::Cursor<[u8; MAX_REQUIRED_INPUT]>,
     pub(crate) lzma_props: LzmaProperties,
+    pub(crate) decoder_options: Options,
     unpacked_size: Option<u64>,
     literal_probs: Vec2D<u16>,
     pos_slot_decoder: [BitTree; 4],
@@ -183,11 +184,16 @@ pub(crate) struct DecoderState {
 }
 
 impl DecoderState {
-    pub fn new(lzma_props: LzmaProperties, unpacked_size: Option<u64>) -> Self {
+    pub fn new(
+        lzma_props: LzmaProperties,
+        decoder_options: Options,
+        unpacked_size: Option<u64>,
+    ) -> Self {
         lzma_props.validate();
         DecoderState {
             partial_input_buf: std::io::Cursor::new([0; MAX_REQUIRED_INPUT]),
             lzma_props,
+            decoder_options,
             unpacked_size,
             literal_probs: Vec2D::init(0x400, (1 << (lzma_props.lc + lzma_props.lp), 0x300)),
             pos_slot_decoder: [
@@ -364,7 +370,7 @@ impl DecoderState {
             if update {
                 self.rep[0] = rep_0;
                 if self.rep[0] == 0xFFFF_FFFF {
-                    if rangecoder.is_finished_ok()? {
+                    if rangecoder.is_finished_ok()? || self.decoder_options.allow_trailing_bytes {
                         return Ok(ProcessingStatus::Finished);
                     }
                     return Err(error::Error::LzmaError(String::from(
@@ -595,11 +601,15 @@ pub struct LzmaDecoder {
 impl LzmaDecoder {
     /// Creates a new object ready for decompressing data that it's given for the input
     /// dict size, expected unpacked data size, and memory limit for the internal buffer.
-    pub fn new(params: LzmaParams, memlimit: Option<usize>) -> error::Result<LzmaDecoder> {
+    pub fn new(
+        params: LzmaParams,
+        memlimit: Option<usize>,
+        decoder_options: Options,
+    ) -> error::Result<LzmaDecoder> {
         Ok(Self {
             params,
             memlimit: memlimit.unwrap_or(usize::MAX),
-            state: DecoderState::new(params.properties, params.unpacked_size),
+            state: DecoderState::new(params.properties, decoder_options, params.unpacked_size),
         })
     }
 

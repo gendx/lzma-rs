@@ -2,6 +2,7 @@
 
 use crate::decode::lzma2::Lzma2Decoder;
 use crate::decode::util;
+use crate::decompress::Options;
 use crate::error;
 use crate::xz::crc::{CRC32, CRC64};
 use crate::xz::{footer, header, CheckMethod, StreamFlags};
@@ -15,7 +16,11 @@ struct Record {
     unpacked_size: u64,
 }
 
-pub fn decode_stream<R, W>(input: &mut R, output: &mut W) -> error::Result<()>
+pub fn decode_stream<R, W>(
+    input: &mut R,
+    output: &mut W,
+    decoder_options: Options,
+) -> error::Result<()>
 where
     R: io::BufRead,
     W: io::Write,
@@ -41,6 +46,7 @@ where
             header.stream_flags.check_method,
             &mut records,
             header_size,
+            decoder_options,
         )?;
     };
 
@@ -199,6 +205,7 @@ fn read_block<'a, R, W>(
     check_method: CheckMethod,
     records: &mut Vec<Record>,
     header_size: u8,
+    decoder_options: Options,
 ) -> error::Result<bool>
 where
     R: io::BufRead,
@@ -228,7 +235,7 @@ where
     for (i, filter) in filters.iter().enumerate() {
         if i == 0 {
             // TODO: use SubBufRead on input if packed_size is known?
-            let packed_size = decode_filter(count_input, &mut tmpbuf, filter)?;
+            let packed_size = decode_filter(count_input, &mut tmpbuf, filter, decoder_options)?;
             if let Some(expected_packed_size) = block_header.packed_size {
                 if (packed_size as u64) != expected_packed_size {
                     return Err(error::Error::XzError(format!(
@@ -243,6 +250,7 @@ where
                 &mut io::BufReader::new(tmpbuf.as_slice()),
                 &mut newbuf,
                 filter,
+                decoder_options,
             )?;
             // TODO: does this move or copy?
             tmpbuf = newbuf;
@@ -332,7 +340,12 @@ where
     Ok(())
 }
 
-fn decode_filter<R, W>(input: &mut R, output: &mut W, filter: &Filter) -> error::Result<usize>
+fn decode_filter<R, W>(
+    input: &mut R,
+    output: &mut W,
+    filter: &Filter,
+    decoder_options: Options,
+) -> error::Result<usize>
 where
     R: io::BufRead,
     W: io::Write,
@@ -347,7 +360,7 @@ where
                 )));
             }
             // TODO: properties??
-            Lzma2Decoder::new().decompress(&mut count_input, output)?;
+            Lzma2Decoder::new(decoder_options).decompress(&mut count_input, output)?;
             Ok(count_input.count())
         }
     }

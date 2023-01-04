@@ -14,7 +14,7 @@ pub struct Lzma2Decoder {
 
 impl Lzma2Decoder {
     /// Creates a new object ready for decompressing data that it's given.
-    pub fn new() -> Lzma2Decoder {
+    pub fn new(decoder_options: crate::decompress::Options) -> Lzma2Decoder {
         Lzma2Decoder {
             lzma_state: DecoderState::new(
                 LzmaProperties {
@@ -22,6 +22,7 @@ impl Lzma2Decoder {
                     lp: 0,
                     pb: 0,
                 },
+                decoder_options,
                 None,
             ),
         }

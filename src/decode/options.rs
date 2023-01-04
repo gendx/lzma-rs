@@ -16,6 +16,10 @@ pub struct Options {
     ///
     /// The default is false (always do completion check).
     pub allow_incomplete: bool,
+
+    /// Determines whether to allow for any bytes remaining in the buffer after "end-of-stream" marker
+    /// The default is false (always do completion check).
+    pub allow_trailing_bytes: bool,
 }
 
 /// Alternatives for defining the unpacked size of the decoded data.
@@ -55,6 +59,7 @@ mod test {
                 unpacked_size: UnpackedSize::ReadFromHeader,
                 memlimit: None,
                 allow_incomplete: false,
+                allow_trailing_bytes: false,
             },
             Options::default()
         );
