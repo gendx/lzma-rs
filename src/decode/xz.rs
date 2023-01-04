@@ -119,7 +119,7 @@ where
             lzma_info!("XZ index checking record {}: {:?}", i, record);
 
             let unpadded_size = get_multibyte(&mut digested)?;
-            if unpadded_size != record.unpadded_size as u64 {
+            if unpadded_size != record.unpadded_size {
                 return Err(error::Error::XzError(format!(
                     "Invalid index for record {}: unpadded size ({}) does not match index ({})",
                     i, record.unpadded_size, unpadded_size
@@ -127,7 +127,7 @@ where
             }
 
             let unpacked_size = get_multibyte(&mut digested)?;
-            if unpacked_size != record.unpacked_size as u64 {
+            if unpacked_size != record.unpacked_size {
                 return Err(error::Error::XzError(format!(
                     "Invalid index for record {}: unpacked size ({}) does not match index ({})",
                     i, record.unpacked_size, unpacked_size
