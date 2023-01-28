@@ -3,8 +3,18 @@ use crate::decode::lzma::{DecoderState, LzmaParams};
 use crate::decode::rangecoder::RangeDecoder;
 use crate::decompress::Options;
 use crate::error::Error;
-use std::fmt::Debug;
+#[cfg(feature = "no_std")]
+use core::fmt::{self, Debug};
+#[cfg(feature = "no_std")]
+use core::u64::MAX as U64_MAX;
+#[cfg(feature = "no_std")]
+use core2::io::{self, BufRead, Cursor, Read, Write};
+#[cfg(not(feature = "no_std"))]
+use std::fmt::{self, Debug};
+#[cfg(not(feature = "no_std"))]
 use std::io::{self, BufRead, Cursor, Read, Write};
+#[cfg(not(feature = "no_std"))]
+use std::u64::MAX as U64_MAX;
 
 /// Minimum header length to be read.
 /// - props: u8 (1 byte)
@@ -52,7 +62,7 @@ impl<W> Debug for RunState<W>
 where
     W: Write,
 {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("RunState")
             .field("range", &self.range)
             .field("code", &self.code)
@@ -211,7 +221,7 @@ impl<W> Debug for Stream<W>
 where
     W: Write + Debug,
 {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("Stream")
             .field("tmp", &self.tmp.position())
             .field("state", &self.state)
@@ -277,7 +287,7 @@ where
                                 // reset the cursor because we may have partial reads
                                 input.set_position(0);
                                 let bytes_read = input.read(&mut self.tmp.get_mut()[..])?;
-                                let bytes_read = if bytes_read < std::u64::MAX as usize {
+                                let bytes_read = if bytes_read < U64_MAX as usize {
                                     bytes_read as u64
                                 } else {
                                     return Err(io::Error::new(
@@ -348,6 +358,8 @@ impl From<Error> for io::Error {
 #[cfg(test)]
 mod test {
     use super::*;
+    #[cfg(feature = "no_std")]
+    use alloc::vec::Vec;
 
     /// Test an empty stream
     #[test]

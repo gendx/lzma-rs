@@ -1,4 +1,9 @@
+#[cfg(feature = "no_std")]
+use alloc::vec;
 use byteorder::{BigEndian, WriteBytesExt};
+#[cfg(feature = "no_std")]
+use core2::io;
+#[cfg(not(feature = "no_std"))]
 use std::io;
 
 pub fn encode_stream<R, W>(input: &mut R, output: &mut W) -> io::Result<()>

@@ -5,9 +5,13 @@ use crate::decode::util;
 use crate::error;
 use crate::xz::crc::{CRC32, CRC64};
 use crate::xz::{footer, header, CheckMethod, StreamFlags};
+#[cfg(feature = "no_std")]
+use alloc::vec::Vec;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use std::io;
-use std::io::Read;
+#[cfg(feature = "no_std")]
+use core2::io::{self, Read};
+#[cfg(not(feature = "no_std"))]
+use std::io::{self, Read};
 
 #[derive(Debug)]
 struct Record {

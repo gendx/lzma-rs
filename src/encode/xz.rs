@@ -3,8 +3,10 @@ use crate::encode::{lzma2, util};
 use crate::xz::crc::CRC32;
 use crate::xz::{footer, header, CheckMethod, StreamFlags};
 use byteorder::{LittleEndian, WriteBytesExt};
-use std::io;
-use std::io::Write;
+#[cfg(feature = "no_std")]
+use core2::io::{self, Write};
+#[cfg(not(feature = "no_std"))]
+use std::io::{self, Write};
 
 pub fn encode_stream<R, W>(input: &mut R, output: &mut W) -> io::Result<()>
 where

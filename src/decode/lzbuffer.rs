@@ -1,4 +1,7 @@
 use crate::error;
+#[cfg(feature = "no_std")]
+use core2::io;
+#[cfg(not(feature = "no_std"))]
 use std::io;
 
 pub trait LzBuffer<W>

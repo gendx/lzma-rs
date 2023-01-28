@@ -2,6 +2,9 @@ use crate::decode::util;
 use crate::error;
 use crate::util::const_assert;
 use byteorder::{BigEndian, ReadBytesExt};
+#[cfg(feature = "no_std")]
+use core2::io;
+#[cfg(not(feature = "no_std"))]
 use std::io;
 
 pub struct RangeDecoder<'a, R>
