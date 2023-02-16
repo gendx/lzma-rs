@@ -301,12 +301,48 @@ where
     fn finish(mut self) -> io::Result<W> {
         if self.cursor > 0 {
             self.stream.write_all(&self.buf[0..self.cursor])?;
-            self.stream.flush()?;
         }
+        self.stream.flush()?;
         Ok(self.stream)
     }
 
     fn into_output(self) -> W {
         self.stream
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[derive(Default)]
+    struct ManuallyFlushedWriter {
+        unflushed: Vec<u8>,
+        flushed: Vec<u8>,
+    }
+    impl io::Write for ManuallyFlushedWriter {
+        fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
+            let len = buf.len();
+            self.unflushed.extend_from_slice(buf);
+            Ok(len)
+        }
+
+        fn flush(&mut self) -> Result<(), io::Error> {
+            self.flushed.append(&mut self.unflushed);
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn finish_flushes_everything() {
+        const MEM_LIMIT: usize = 8;
+        const DICT_SIZE: usize = MEM_LIMIT;
+        let stream = ManuallyFlushedWriter::default();
+        let mut b = LzCircularBuffer::from_stream(stream, DICT_SIZE, MEM_LIMIT);
+        for _ in 0..(DICT_SIZE * 4) {
+            b.append_literal(5).unwrap();
+        }
+        let stream = b.finish().unwrap();
+        assert!(stream.unflushed.is_empty());
     }
 }
