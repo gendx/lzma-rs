@@ -13,8 +13,8 @@ jobs:
           components: clippy
 
       - name: Check Clippy lints
-        run: cargo clippy --verbose -- -W clippy::match-same-arms
+        run: cargo clippy --verbose --all-features -- -W clippy::match-same-arms
       - name: Check Clippy lints on tests
-        run: cargo clippy --verbose --tests -- -W clippy::match-same-arms
+        run: cargo clippy --verbose --all-features --tests -- -W clippy::match-same-arms
       - name: Check Clippy lints on fuzzing
-        run: cargo clippy --verbose --manifest-path fuzz/Cargo.toml -- -W clippy::match-same-arms
+        run: cargo clippy --verbose --all-features --manifest-path fuzz/Cargo.toml -- -W clippy::match-same-arms
