@@ -19,12 +19,13 @@ pub struct Options {
 }
 
 /// Alternatives for defining the unpacked size of the decoded data.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum UnpackedSize {
     /// Assume that the 8 bytes used to specify the unpacked size are present in the header.
     /// If the bytes are `0xFFFF_FFFF_FFFF_FFFF`, assume that there is an end-of-payload marker in
     /// the file.
     /// If not, read the 8 bytes as a little-endian encoded u64.
+    #[default]
     ReadFromHeader,
     /// Assume that there are 8 bytes representing the unpacked size present in the header.
     /// Read it, but ignore it and use the provided value instead.
@@ -39,15 +40,10 @@ pub enum UnpackedSize {
     UseProvided(Option<u64>),
 }
 
-impl Default for UnpackedSize {
-    fn default() -> UnpackedSize {
-        UnpackedSize::ReadFromHeader
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
+
     #[test]
     fn test_options() {
         assert_eq!(

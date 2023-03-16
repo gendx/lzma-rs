@@ -249,19 +249,19 @@ impl DecoderState {
         self.unpacked_size = unpacked_size;
     }
 
-    pub fn process<'a, W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
+    pub fn process<W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
         &mut self,
         output: &mut LZB,
-        rangecoder: &mut RangeDecoder<'a, R>,
+        rangecoder: &mut RangeDecoder<'_, R>,
     ) -> error::Result<()> {
         self.process_mode(output, rangecoder, ProcessingMode::Finish)
     }
 
     #[cfg(feature = "stream")]
-    pub fn process_stream<'a, W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
+    pub fn process_stream<W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
         &mut self,
         output: &mut LZB,
-        rangecoder: &mut RangeDecoder<'a, R>,
+        rangecoder: &mut RangeDecoder<'_, R>,
     ) -> error::Result<()> {
         self.process_mode(output, rangecoder, ProcessingMode::Partial)
     }
@@ -272,10 +272,10 @@ impl DecoderState {
     ///
     /// Returns `ProcessingStatus` to determine whether one should continue
     /// processing the loop.
-    fn process_next_inner<'a, W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
+    fn process_next_inner<W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
         &mut self,
         output: &mut LZB,
-        rangecoder: &mut RangeDecoder<'a, R>,
+        rangecoder: &mut RangeDecoder<'_, R>,
         update: bool,
     ) -> error::Result<ProcessingStatus> {
         let pos_state = output.len() & ((1 << self.lzma_props.pb) - 1);
@@ -389,10 +389,10 @@ impl DecoderState {
         Ok(ProcessingStatus::Continue)
     }
 
-    fn process_next<'a, W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
+    fn process_next<W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
         &mut self,
         output: &mut LZB,
-        rangecoder: &mut RangeDecoder<'a, R>,
+        rangecoder: &mut RangeDecoder<'_, R>,
     ) -> error::Result<ProcessingStatus> {
         self.process_next_inner(output, rangecoder, true)
     }
@@ -416,9 +416,9 @@ impl DecoderState {
     }
 
     /// Utility function to read data into the partial input buffer.
-    fn read_partial_input_buf<'a, R: io::BufRead>(
+    fn read_partial_input_buf<R: io::BufRead>(
         &mut self,
-        rangecoder: &mut RangeDecoder<'a, R>,
+        rangecoder: &mut RangeDecoder<'_, R>,
     ) -> error::Result<()> {
         // Fill as much of the tmp buffer as possible
         let start = self.partial_input_buf.position() as usize;
@@ -429,10 +429,10 @@ impl DecoderState {
         Ok(())
     }
 
-    fn process_mode<'a, W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
+    fn process_mode<W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
         &mut self,
         output: &mut LZB,
-        rangecoder: &mut RangeDecoder<'a, R>,
+        rangecoder: &mut RangeDecoder<'_, R>,
         mode: ProcessingMode,
     ) -> error::Result<()> {
         loop {
@@ -520,10 +520,10 @@ impl DecoderState {
         Ok(())
     }
 
-    fn decode_literal<'a, W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
+    fn decode_literal<W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
         &mut self,
         output: &mut LZB,
-        rangecoder: &mut RangeDecoder<'a, R>,
+        rangecoder: &mut RangeDecoder<'_, R>,
         update: bool,
     ) -> error::Result<u8> {
         let def_prev_byte = 0u8;
@@ -557,9 +557,9 @@ impl DecoderState {
         Ok((result - 0x100) as u8)
     }
 
-    fn decode_distance<'a, R: io::BufRead>(
+    fn decode_distance<R: io::BufRead>(
         &mut self,
-        rangecoder: &mut RangeDecoder<'a, R>,
+        rangecoder: &mut RangeDecoder<'_, R>,
         length: usize,
         update: bool,
     ) -> error::Result<usize> {

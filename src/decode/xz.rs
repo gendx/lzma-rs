@@ -93,8 +93,8 @@ where
     Ok(())
 }
 
-fn check_index<'a, R>(
-    count_input: &mut util::CountBufRead<'a, R>,
+fn check_index<R>(
+    count_input: &mut util::CountBufRead<'_, R>,
     records: &[Record],
 ) -> error::Result<()>
 where
@@ -193,8 +193,8 @@ struct BlockHeader {
     unpacked_size: Option<u64>,
 }
 
-fn read_block<'a, R, W>(
-    count_input: &mut util::CountBufRead<'a, R>,
+fn read_block<R, W>(
+    count_input: &mut util::CountBufRead<'_, R>,
     output: &mut W,
     check_method: CheckMethod,
     records: &mut Vec<Record>,
