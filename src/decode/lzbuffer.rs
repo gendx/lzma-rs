@@ -320,6 +320,7 @@ mod test {
         unflushed: Vec<u8>,
         flushed: Vec<u8>,
     }
+
     impl io::Write for ManuallyFlushedWriter {
         fn write(&mut self, buf: &[u8]) -> Result<usize, io::Error> {
             let len = buf.len();
