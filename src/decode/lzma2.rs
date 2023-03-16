@@ -12,6 +12,12 @@ pub struct Lzma2Decoder {
     lzma_state: DecoderState,
 }
 
+impl Default for Lzma2Decoder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Lzma2Decoder {
     /// Creates a new object ready for decompressing data that it's given.
     pub fn new() -> Lzma2Decoder {

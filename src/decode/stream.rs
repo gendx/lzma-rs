@@ -33,7 +33,7 @@ where
     /// Stream is initialized but header values have not yet been read.
     Header(W),
     /// Header values have been read and the stream is ready to process more data.
-    Data(RunState<W>),
+    Data(Box<RunState<W>>),
 }
 
 /// Structures needed while decoding data.
@@ -99,7 +99,7 @@ where
     /// Get a reference to the output sink
     pub fn get_output(&self) -> Option<&W> {
         self.state.as_ref().map(|state| match state {
-            State::Header(output) => &output,
+            State::Header(output) => output,
             State::Data(state) => state.output.get_output(),
         })
     }
@@ -168,12 +168,12 @@ where
                 // The RangeDecoder is only kept temporarily as we are processing
                 // chunks of data.
                 if let Ok(rangecoder) = RangeDecoder::new(&mut input) {
-                    Ok(State::Data(RunState {
+                    Ok(State::Data(Box::new(RunState {
                         decoder,
                         output,
                         range: rangecoder.range,
                         code: rangecoder.code,
-                    }))
+                    })))
                 } else {
                     // Failed to create a RangeDecoder because we need more data,
                     // try again later.
@@ -188,7 +188,7 @@ where
     }
 
     /// Process compressed data
-    fn read_data<R: BufRead>(mut state: RunState<W>, mut input: &mut R) -> io::Result<RunState<W>> {
+    fn read_data<R: BufRead>(state: &mut RunState<W>, mut input: &mut R) -> io::Result<()> {
         // Construct our RangeDecoder from the previous range and code
         // values.
         let mut rangecoder = RangeDecoder::from_parts(&mut input, state.range, state.code);
@@ -199,12 +199,9 @@ where
             .process_stream(&mut state.output, &mut rangecoder)
             .map_err(|e| -> io::Error { e.into() })?;
 
-        Ok(RunState {
-            decoder: state.decoder,
-            output: state.output,
-            range: rangecoder.range,
-            code: rangecoder.code,
-        })
+        state.range = rangecoder.range;
+        state.code = rangecoder.code;
+        Ok(())
     }
 }
 
@@ -261,7 +258,7 @@ where
                             let tmp = *self.tmp.get_ref();
                             let end = self.tmp.position();
                             let new_len = end - position;
-                            (&mut self.tmp.get_mut()[0..new_len as usize])
+                            self.tmp.get_mut()[0..new_len as usize]
                                 .copy_from_slice(&tmp[position as usize..end as usize]);
                             self.tmp.set_position(new_len);
                         }
@@ -309,17 +306,15 @@ where
                 }
 
                 // Process another chunk of data.
-                State::Data(state) => {
-                    let state = if self.tmp.position() > 0 {
+                State::Data(mut state) => {
+                    if self.tmp.position() > 0 {
                         let mut tmp_input =
                             Cursor::new(&self.tmp.get_ref()[0..self.tmp.position() as usize]);
-                        let res = Stream::read_data(state, &mut tmp_input)?;
+                        Stream::read_data(&mut state, &mut tmp_input)?;
                         self.tmp.set_position(0);
-                        res
-                    } else {
-                        state
                     };
-                    State::Data(Stream::read_data(state, &mut input)?)
+                    Stream::read_data(&mut state, &mut input)?;
+                    State::Data(state)
                 }
             };
             self.state.replace(state);
@@ -485,7 +480,7 @@ mod test {
 
         // Should fail to finish() without the allow_incomplete option.
         let mut stream = Stream::new(Vec::new());
-        stream.write_all(&compressed[..]).unwrap();
+        stream.write_all(compressed).unwrap();
         stream.finish().unwrap_err();
 
         // Should succeed with the allow_incomplete option.
@@ -496,7 +491,7 @@ mod test {
             },
             Vec::new(),
         );
-        stream.write_all(&compressed[..]).unwrap();
+        stream.write_all(compressed).unwrap();
         let output = stream.finish().unwrap();
         assert_eq!(output, &input[..26]);
     }
