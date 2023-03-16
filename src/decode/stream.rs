@@ -61,7 +61,7 @@ where
 }
 
 /// Lzma decompressor that can process multiple chunks of data using the
-/// `io::Write` interface.
+/// [`io::Write`] interface.
 #[cfg_attr(docsrs, doc(cfg(stream)))]
 pub struct Stream<W>
 where
@@ -70,7 +70,7 @@ where
     /// Temporary buffer to hold data while the header is being read.
     tmp: Cursor<[u8; MAX_TMP_LEN]>,
     /// Whether the stream is initialized and ready to process data.
-    /// An `Option` is used to avoid interior mutability when updating the
+    /// An [`Option`] is used to avoid interior mutability when updating the
     /// state.
     state: Option<State<W>>,
     /// Options given when a stream is created.
@@ -82,13 +82,13 @@ where
     W: Write,
 {
     /// Initialize the stream. This will consume the `output` which is the sink
-    /// implementing `io::Write` that will receive decompressed bytes.
+    /// implementing [`io::Write`] that will receive decompressed bytes.
     pub fn new(output: W) -> Self {
         Self::new_with_options(&Options::default(), output)
     }
 
     /// Initialize the stream with the given `options`. This will consume the
-    /// `output` which is the sink implementing `io::Write` that will
+    /// `output` which is the sink implementing [`io::Write`] that will
     /// receive decompressed bytes.
     pub fn new_with_options(options: &Options, output: W) -> Self {
         Self {
@@ -98,7 +98,7 @@ where
         }
     }
 
-    /// Get a reference to the output sink
+    /// Get a reference to the output sink.
     pub fn get_output(&self) -> Option<&W> {
         self.state.as_ref().map(|state| match state {
             State::Header(output) => output,
@@ -106,7 +106,7 @@ where
         })
     }
 
-    /// Get a mutable reference to the output sink
+    /// Get a mutable reference to the output sink;
     pub fn get_output_mut(&mut self) -> Option<&mut W> {
         self.state.as_mut().map(|state| match state {
             State::Header(output) => output,
@@ -189,7 +189,7 @@ where
         }
     }
 
-    /// Process compressed data
+    /// Process compressed data.
     fn read_data<R: BufRead>(state: &mut RunState<W>, mut input: &mut R) -> io::Result<()> {
         // Construct our RangeDecoder from the previous range and code
         // values.
@@ -325,8 +325,8 @@ where
     }
 
     /// Flushes the output sink. The internal buffer isn't flushed to avoid
-    /// corrupting the internal state. Instead, call `finish()` to finalize the
-    /// stream and flush all remaining internal data.
+    /// corrupting the internal state. Instead, call [`Self::finish()`] to
+    /// finalize the stream and flush all remaining internal data.
     fn flush(&mut self) -> io::Result<()> {
         if let Some(ref mut state) = self.state {
             match state {

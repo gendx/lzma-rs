@@ -1,13 +1,15 @@
 use std::io;
 
-// A Write computing a digest on the bytes written.
+/// An [`io::Write`] computing a digest on the bytes written.
 pub struct CrcDigestWrite<'a, 'b, W, S>
 where
     W: 'a + io::Write,
     S: crc::Width,
 {
-    write: &'a mut W,                   // underlying writer
-    digest: &'a mut crc::Digest<'b, S>, // hasher
+    /// Underlying writer
+    write: &'a mut W,
+    /// Hasher
+    digest: &'a mut crc::Digest<'b, S>,
 }
 
 impl<'a, 'b, W, S> CrcDigestWrite<'a, 'b, W, S>
@@ -34,13 +36,15 @@ where
     }
 }
 
-// A Write counting the bytes written.
+/// An [`io::Write`] counting the bytes written.
 pub struct CountWrite<'a, W>
 where
     W: 'a + io::Write,
 {
-    write: &'a mut W, // underlying writer
-    count: usize,     // number of bytes written
+    /// Underlying writer
+    write: &'a mut W,
+    /// Number of bytes written
+    count: usize,
 }
 
 impl<'a, W> CountWrite<'a, W>

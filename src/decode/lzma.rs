@@ -19,12 +19,13 @@ const MAX_REQUIRED_INPUT: usize = 20;
 #[derive(Debug, PartialEq)]
 enum ProcessingMode {
     /// Streaming mode. Process the input bytes but assume there will be more
-    /// chunks of input data to receive in future calls to `process_mode()`.
+    /// chunks of input data to receive in future calls to
+    /// [`DecoderState::process_mode()`].
     Partial,
     /// Synchronous mode. Process the input bytes and confirm end of stream has
     /// been reached. Use this mode if you are processing a fixed buffer of
-    /// compressed data, or after using `Mode::Partial` to check for the end
-    /// of stream.
+    /// compressed data, or after using [`ProcessingMode::Partial`] to check for
+    /// the end of stream.
     Finish,
 }
 
@@ -38,7 +39,7 @@ enum ProcessingStatus {
 }
 
 #[derive(Debug, Copy, Clone)]
-/// LZMA 'lclppb' decompression properties.
+/// LZMA "lclppb" decompression properties.
 pub struct LzmaProperties {
     /// The number of literal context bits.
     ///
@@ -68,7 +69,7 @@ impl LzmaProperties {
 #[derive(Debug, Copy, Clone)]
 /// LZMA decompression parameters.
 pub struct LzmaParams {
-    /// The LZMA 'lclppb' decompression properties.
+    /// The LZMA "lclppb" decompression properties.
     pub(crate) properties: LzmaProperties,
     /// The dictionary size to use when decompressing.
     pub(crate) dict_size: u32,
@@ -272,7 +273,7 @@ impl DecoderState {
     ///
     /// If the update flag is true, the decoder's state will be updated.
     ///
-    /// Returns `ProcessingStatus` to determine whether one should continue
+    /// Returns [`ProcessingStatus`] to determine whether one should continue
     /// processing the loop.
     fn process_next_inner<W: io::Write, LZB: LzBuffer<W>, R: io::BufRead>(
         &mut self,
@@ -615,7 +616,7 @@ impl LzmaDecoder {
     /// freshly allocated copy.
     ///
     /// Because the decoder state is reset, the unpacked size may optionally be
-    /// re-specified. If `None` is given, the previous unpacked size that
+    /// re-specified. If [`None`] is given, the previous unpacked size that
     /// the decoder was initialized with remains unchanged.
     ///
     /// This function may not allocate memory and will attempt to reuse any

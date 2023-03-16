@@ -33,14 +33,16 @@ pub fn flush_zero_padding<R: io::BufRead>(input: &mut R) -> io::Result<bool> {
     }
 }
 
-// A Read computing a digest on the bytes read.
+/// An [`io::Read`] computing a digest on the bytes read.
 pub struct CrcDigestRead<'a, 'b, R, S>
 where
     R: 'a + io::Read,
     S: crc::Width,
 {
-    read: &'a mut R,                    // underlying reader
-    digest: &'a mut crc::Digest<'b, S>, // hasher
+    /// Underlying reader
+    read: &'a mut R,
+    /// Hasher
+    digest: &'a mut crc::Digest<'b, S>,
 }
 
 impl<'a, 'b, R, S> CrcDigestRead<'a, 'b, R, S>
@@ -64,13 +66,15 @@ where
     }
 }
 
-// A BufRead counting the bytes read.
+/// An [`io::BufRead`] counting the bytes read.
 pub struct CountBufRead<'a, R>
 where
     R: 'a + io::BufRead,
 {
-    read: &'a mut R, // underlying reader
-    count: usize,    // number of bytes read
+    /// Underlying reader
+    read: &'a mut R,
+    /// Number of bytes read
+    count: usize,
 }
 
 impl<'a, R> CountBufRead<'a, R>

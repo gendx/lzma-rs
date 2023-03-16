@@ -4,9 +4,7 @@ pub struct Options {
     /// Defines whether the unpacked size should be read from the header or
     /// provided.
     ///
-    /// The default is
-    /// [`UnpackedSize::ReadFromHeader`](enum.UnpackedSize.html#variant.
-    /// ReadFromHeader).
+    /// The default is [`UnpackedSize::ReadFromHeader`].
     pub unpacked_size: UnpackedSize,
     /// Defines whether the dictionary's dynamic size should be limited during
     /// decompression.
@@ -15,7 +13,7 @@ pub struct Options {
     pub memlimit: Option<usize>,
     /// Determines whether to bypass end of stream validation.
     ///
-    /// This option only applies to the [`Stream`](struct.Stream.html) API.
+    /// This option only applies to the `stream` API.
     ///
     /// The default is false (always do completion check).
     pub allow_incomplete: bool,
@@ -32,15 +30,15 @@ pub enum UnpackedSize {
     ReadFromHeader,
     /// Assume that there are 8 bytes representing the unpacked size present in
     /// the header. Read it, but ignore it and use the provided value
-    /// instead. If the provided value is `None`, assume that there is an
+    /// instead. If the provided value is [`None`], assume that there is an
     /// end-of-payload marker in the file. Note that this is a non-standard
     /// way of reading LZMA data, but is used by certain libraries such as
     /// [OpenCTM](http://openctm.sourceforge.net/).
     ReadHeaderButUseProvided(Option<u64>),
     /// Assume that the 8 bytes typically used to represent the unpacked size
     /// are *not* present in the header. Use the provided value.
-    /// If the provided value is `None`, assume that there is an end-of-payload
-    /// marker in the file.
+    /// If the provided value is [`None`], assume that there is an
+    /// end-of-payload marker in the file.
     UseProvided(Option<u64>),
 }
 

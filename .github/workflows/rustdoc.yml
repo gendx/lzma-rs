@@ -1,0 +1,14 @@
+on: [push, pull_request]
+name: Rustdoc on nightly toolchain
+jobs:
+  rustdoc:
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: "-D warnings"
+      CARGO_UNSTABLE_SPARSE_REGISTRY: true
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+
+      - name: Check Rust documentation
+        run: cargo +nightly doc --document-private-items

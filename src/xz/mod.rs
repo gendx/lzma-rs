@@ -1,6 +1,6 @@
 //! Logic for handling `.xz` file format.
 //!
-//! Format specifications are at [https://tukaani.org/xz/xz-file-format.txt](spec).
+//! Format specifications are at [https://tukaani.org/xz/xz-file-format.txt][spec].
 //!
 //! [spec]: https://tukaani.org/xz/xz-file-format.txt
 
