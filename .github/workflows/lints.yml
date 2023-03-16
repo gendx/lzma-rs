@@ -7,7 +7,7 @@ jobs:
       RUSTFLAGS: "-D warnings"
       CARGO_UNSTABLE_SPARSE_REGISTRY: true
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
