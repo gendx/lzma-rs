@@ -150,8 +150,9 @@ mod test {
     fn index_add_overflow() {
         // Matrix with 5 columns.
         let matrix = Vec2D::init(0, (3, 5));
-        // Somehow, as long as numbits(usize) is a multiple of 4, then 5 divides usize::MAX.
-        // This is clear in hexadecimal: usize::MAX is 0xFFF...F and usize::MAX / 5 is 0x333...3.
+        // Somehow, as long as numbits(usize) is a multiple of 4, then 5 divides
+        // usize::MAX. This is clear in hexadecimal: usize::MAX is 0xFFF...F and
+        // usize::MAX / 5 is 0x333...3.
         let row = usize::MAX / 5;
         // This will therefore try to index data[usize::MAX..4].
         let _ = matrix[row];
@@ -201,8 +202,9 @@ mod test {
     fn indexmut_add_overflow() {
         // Matrix with 5 columns.
         let mut matrix = Vec2D::init(0, (3, 5));
-        // Somehow, as long as numbits(usize) is a multiple of 4, then 5 divides usize::MAX.
-        // This is clear in hexadecimal: usize::MAX is 0xFFF...F and usize::MAX / 5 is 0x333...3.
+        // Somehow, as long as numbits(usize) is a multiple of 4, then 5 divides
+        // usize::MAX. This is clear in hexadecimal: usize::MAX is 0xFFF...F and
+        // usize::MAX / 5 is 0x333...3.
         let row = usize::MAX / 5;
         // This will therefore try to index data[usize::MAX..4].
         matrix[row][0] = 9;

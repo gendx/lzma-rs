@@ -106,8 +106,8 @@ fn assert_decomp_eq(compressed: &[u8], expected: &[u8], compare_to_liblzma: bool
         assert_eq!(decomp, expected);
     }
 
-    // Test consistency with lzma crate. Sometimes that crate fails (e.g. huge dictionary), so we
-    // have a flag to slip that.
+    // Test consistency with lzma crate. Sometimes that crate fails (e.g. huge
+    // dictionary), so we have a flag to skip that.
     if compare_to_liblzma {
         let decomp = lzma::decompress(compressed).unwrap();
         assert_eq!(decomp, expected);

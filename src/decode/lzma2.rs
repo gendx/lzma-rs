@@ -33,9 +33,11 @@ impl Lzma2Decoder {
         }
     }
 
-    /// Performs the equivalent of replacing this decompression state with a freshly allocated copy.
+    /// Performs the equivalent of replacing this decompression state with a
+    /// freshly allocated copy.
     ///
-    /// This function may not allocate memory and will attempt to reuse any previously allocated resources.
+    /// This function may not allocate memory and will attempt to reuse any
+    /// previously allocated resources.
     #[cfg(feature = "raw_decoder")]
     pub fn reset(&mut self) {
         self.lzma_state.reset_state(LzmaProperties {
@@ -45,7 +47,8 @@ impl Lzma2Decoder {
         });
     }
 
-    /// Decompresses the input data into the output, consuming only as much input as needed and writing as much output as possible.
+    /// Decompresses the input data into the output, consuming only as much
+    /// input as needed and writing as much output as possible.
     pub fn decompress<W: io::Write, R: io::BufRead>(
         &mut self,
         input: &mut R,

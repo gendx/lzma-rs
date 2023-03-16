@@ -160,11 +160,15 @@ impl<const PROBS_ARRAY_LEN: usize> BitTree<PROBS_ARRAY_LEN> {
         // P = 2 ** floor(log_2(P)), where P is the length of the probability array
         // of the BitTree. This maintains the invariant that P = 1 << N.
         //
-        // This precondition must be checked for any way to construct a new, valid instance of BitTree.
-        // Here it is checked for BitTree::new(), but if another function is added that returns a
-        // new instance of BitTree, this assertion must be checked there as well.
-        const_assert!("BitTree's PROBS_ARRAY_LEN parameter must be a power of 2",
-            PROBS_ARRAY_LEN: usize => (1 << (PROBS_ARRAY_LEN.trailing_zeros() as usize)) == PROBS_ARRAY_LEN);
+        // This precondition must be checked for any way to construct a new, valid
+        // instance of BitTree. Here it is checked for BitTree::new(), but if
+        // another function is added that returns a new instance of BitTree,
+        // this assertion must be checked there as well.
+        const_assert!(
+            "BitTree's PROBS_ARRAY_LEN parameter must be a power of 2",
+            PROBS_ARRAY_LEN: usize =>
+                (1 << (PROBS_ARRAY_LEN.trailing_zeros() as usize)) == PROBS_ARRAY_LEN
+        );
         BitTree {
             probs: [0x400; PROBS_ARRAY_LEN],
         }
@@ -370,16 +374,16 @@ mod test {
     #[test]
     fn test_encode_decode_reverse_bittree_zeros() {
         seq!(NUM_BITS in 0..16 {
-            encode_decode_reverse_bittree::<{1 << NUM_BITS}>
-                (&[0; 10000]);
+            encode_decode_reverse_bittree::<{1 << NUM_BITS}>(&[0; 10000]);
         });
     }
 
     #[test]
     fn test_encode_decode_reverse_bittree_ones() {
         seq!(NUM_BITS in 0..16 {
-            encode_decode_reverse_bittree::<{1 << NUM_BITS}>
-                (&[(1 << NUM_BITS) - 1; 10000]);
+            encode_decode_reverse_bittree::<{1 << NUM_BITS}>(
+                &[(1 << NUM_BITS) - 1; 10000],
+            );
         });
     }
 
@@ -388,8 +392,7 @@ mod test {
         seq!(NUM_BITS in 0..16 {
             let max = 1 << NUM_BITS;
             let values: Vec<u32> = (0..max).collect();
-            encode_decode_reverse_bittree::<{1 << NUM_BITS}>
-                (&values);
+            encode_decode_reverse_bittree::<{1 << NUM_BITS}>(&values);
         });
     }
 

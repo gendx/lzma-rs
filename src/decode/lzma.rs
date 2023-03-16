@@ -21,9 +21,10 @@ enum ProcessingMode {
     /// Streaming mode. Process the input bytes but assume there will be more
     /// chunks of input data to receive in future calls to `process_mode()`.
     Partial,
-    /// Synchronous mode. Process the input bytes and confirm end of stream has been reached.
-    /// Use this mode if you are processing a fixed buffer of compressed data, or after
-    /// using `Mode::Partial` to check for the end of stream.
+    /// Synchronous mode. Process the input bytes and confirm end of stream has
+    /// been reached. Use this mode if you are processing a fixed buffer of
+    /// compressed data, or after using `Mode::Partial` to check for the end
+    /// of stream.
     Finish,
 }
 
@@ -41,8 +42,8 @@ enum ProcessingStatus {
 pub struct LzmaProperties {
     /// The number of literal context bits.
     ///
-    /// The most `lc` significant bits of the previous byte are part of the literal context.
-    /// `lc` must not be greater than 8.
+    /// The most `lc` significant bits of the previous byte are part of the
+    /// literal context. `lc` must not be greater than 8.
     pub lc: u32, // 0..=8
     /// The number of literal position bits.
     ///
@@ -223,8 +224,9 @@ impl DecoderState {
 
         self.lzma_props = new_props;
         // For stack-allocated arrays, it was found to be faster to re-create new arrays
-        // dropping the existing one, rather than using `fill` to reset the contents to zero.
-        // Heap-based arrays use fill to keep their allocation rather than reallocate.
+        // dropping the existing one, rather than using `fill` to reset the contents to
+        // zero. Heap-based arrays use fill to keep their allocation rather than
+        // reallocate.
         self.pos_slot_decoder = [
             BitTree::new(),
             BitTree::new(),
@@ -399,9 +401,9 @@ impl DecoderState {
 
     /// Try to process the next iteration of the loop.
     ///
-    /// This will check to see if there is enough data to consume and advance the
-    /// decompressor. Needed in streaming mode to avoid corrupting the state while
-    /// processing incomplete chunks of data.
+    /// This will check to see if there is enough data to consume and advance
+    /// the decompressor. Needed in streaming mode to avoid corrupting the
+    /// state while processing incomplete chunks of data.
     fn try_process_next<W: io::Write, LZB: LzBuffer<W>>(
         &mut self,
         output: &mut LZB,
@@ -598,8 +600,9 @@ pub struct LzmaDecoder {
 }
 
 impl LzmaDecoder {
-    /// Creates a new object ready for decompressing data that it's given for the input
-    /// dict size, expected unpacked data size, and memory limit for the internal buffer.
+    /// Creates a new object ready for decompressing data that it's given for
+    /// the input dict size, expected unpacked data size, and memory limit
+    /// for the internal buffer.
     pub fn new(params: LzmaParams, memlimit: Option<usize>) -> error::Result<LzmaDecoder> {
         Ok(Self {
             params,
@@ -608,12 +611,15 @@ impl LzmaDecoder {
         })
     }
 
-    /// Performs the equivalent of replacing this decompression state with a freshly allocated copy.
+    /// Performs the equivalent of replacing this decompression state with a
+    /// freshly allocated copy.
     ///
-    /// Because the decoder state is reset, the unpacked size may optionally be re-specified. If `None`
-    /// is given, the previous unpacked size that the decoder was initialized with remains unchanged.
+    /// Because the decoder state is reset, the unpacked size may optionally be
+    /// re-specified. If `None` is given, the previous unpacked size that
+    /// the decoder was initialized with remains unchanged.
     ///
-    /// This function may not allocate memory and will attempt to reuse any previously allocated resources.
+    /// This function may not allocate memory and will attempt to reuse any
+    /// previously allocated resources.
     #[cfg(feature = "raw_decoder")]
     pub fn reset(&mut self, unpacked_size: Option<Option<u64>>) {
         self.state.reset_state(self.params.properties);
@@ -623,7 +629,8 @@ impl LzmaDecoder {
         }
     }
 
-    /// Decompresses the input data into the output, consuming only as much input as needed and writing as much output as possible.
+    /// Decompresses the input data into the output, consuming only as much
+    /// input as needed and writing as much output as possible.
     pub fn decompress<W: io::Write, R: io::BufRead>(
         &mut self,
         input: &mut R,

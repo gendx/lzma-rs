@@ -39,7 +39,8 @@ pub mod decompress {
     pub use crate::decode::stream::Stream;
 }
 
-/// Decompress LZMA data with default [`Options`](decompress/struct.Options.html).
+/// Decompress LZMA data with default
+/// [`Options`](decompress/struct.Options.html).
 pub fn lzma_decompress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
@@ -58,7 +59,8 @@ pub fn lzma_decompress_with_options<R: io::BufRead, W: io::Write>(
     decoder.decompress(input, output)
 }
 
-/// Compresses data with LZMA and default [`Options`](compress/struct.Options.html).
+/// Compresses data with LZMA and default
+/// [`Options`](compress/struct.Options.html).
 pub fn lzma_compress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
@@ -76,7 +78,8 @@ pub fn lzma_compress_with_options<R: io::BufRead, W: io::Write>(
     encoder.process(input)
 }
 
-/// Decompress LZMA2 data with default [`Options`](decompress/struct.Options.html).
+/// Decompress LZMA2 data with default
+/// [`Options`](decompress/struct.Options.html).
 pub fn lzma2_decompress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
@@ -84,7 +87,8 @@ pub fn lzma2_decompress<R: io::BufRead, W: io::Write>(
     decode::lzma2::Lzma2Decoder::new().decompress(input, output)
 }
 
-/// Compress data with LZMA2 and default [`Options`](compress/struct.Options.html).
+/// Compress data with LZMA2 and default
+/// [`Options`](compress/struct.Options.html).
 pub fn lzma2_compress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,

@@ -32,7 +32,8 @@ where
 {
     /// Stream is initialized but header values have not yet been read.
     Header(W),
-    /// Header values have been read and the stream is ready to process more data.
+    /// Header values have been read and the stream is ready to process more
+    /// data.
     Data(Box<RunState<W>>),
 }
 
@@ -69,7 +70,8 @@ where
     /// Temporary buffer to hold data while the header is being read.
     tmp: Cursor<[u8; MAX_TMP_LEN]>,
     /// Whether the stream is initialized and ready to process data.
-    /// An `Option` is used to avoid interior mutability when updating the state.
+    /// An `Option` is used to avoid interior mutability when updating the
+    /// state.
     state: Option<State<W>>,
     /// Options given when a stream is created.
     options: Options,
