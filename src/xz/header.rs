@@ -5,6 +5,10 @@ use crate::error;
 use crate::xz::crc::CRC32;
 use crate::xz::StreamFlags;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+#[cfg(feature = "no_std")]
+use core2::io;
+#[cfg(not(feature = "no_std"))]
+use std::io;
 
 /// File format magic header signature, see sect. 2.1.1.1.
 pub(crate) const XZ_MAGIC: &[u8] = &[0xFD, 0x37, 0x7A, 0x58, 0x5A, 0x00];
@@ -19,7 +23,7 @@ impl StreamHeader {
     /// Parse a Stream Header from a buffered reader.
     pub(crate) fn parse<BR>(input: &mut BR) -> error::Result<Self>
     where
-        BR: std::io::BufRead,
+        BR: io::BufRead,
     {
         if !util::read_tag(input, XZ_MAGIC)? {
             return Err(error::Error::XzError(format!(

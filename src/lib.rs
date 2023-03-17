@@ -1,8 +1,12 @@
 //! Pure-Rust codecs for LZMA, LZMA2, and XZ.
 #![cfg_attr(docsrs, feature(doc_cfg, doc_cfg_hide))]
+#![cfg_attr(no_std, feature(no_std))]
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 #![forbid(unsafe_code)]
+
+#[cfg(feature = "no_std")]
+extern crate alloc;
 
 #[macro_use]
 mod macros;
@@ -15,6 +19,9 @@ pub mod error;
 mod util;
 mod xz;
 
+#[cfg(feature = "no_std")]
+use core2::io;
+#[cfg(not(feature = "no_std"))]
 use std::io;
 
 /// Compression helpers.

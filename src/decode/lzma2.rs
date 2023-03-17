@@ -3,8 +3,10 @@ use crate::decode::lzma::{DecoderState, LzmaProperties};
 use crate::decode::{lzbuffer, rangecoder};
 use crate::error;
 use byteorder::{BigEndian, ReadBytesExt};
-use std::io;
-use std::io::Read;
+#[cfg(feature = "no_std")]
+use core2::io::{self, Read};
+#[cfg(not(feature = "no_std"))]
+use std::io::{self, Read};
 
 #[derive(Debug)]
 /// Raw decoder for LZMA2.

@@ -1,7 +1,17 @@
 //! Error handling.
 
-use std::fmt::Display;
-use std::{io, result};
+#[cfg(feature = "no_std")]
+use alloc::string::String;
+#[cfg(feature = "no_std")]
+use core::fmt::{self, Display};
+#[cfg(feature = "no_std")]
+use core::result;
+#[cfg(feature = "no_std")]
+use core2::{error, io};
+#[cfg(not(feature = "no_std"))]
+use std::fmt::{self, Display};
+#[cfg(not(feature = "no_std"))]
+use std::{error, io, result};
 
 /// Library errors.
 #[derive(Debug)]
@@ -26,7 +36,7 @@ impl From<io::Error> for Error {
 }
 
 impl Display for Error {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Error::IoError(e) => write!(fmt, "io error: {}", e),
             Error::HeaderTooShort(e) => write!(fmt, "header too short: {}", e),
@@ -36,8 +46,8 @@ impl Display for Error {
     }
 }
 
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+impl error::Error for Error {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
             Error::IoError(e) | Error::HeaderTooShort(e) => Some(e),
             Error::LzmaError(_) | Error::XzError(_) => None,
@@ -48,15 +58,15 @@ impl std::error::Error for Error {
 #[cfg(test)]
 mod test {
     use super::Error;
+    #[cfg(feature = "no_std")]
+    use core2::io;
+    #[cfg(not(feature = "no_std"))]
+    use std::io;
 
     #[test]
     fn test_display() {
         assert_eq!(
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "this is an error"
-            ))
-            .to_string(),
+            Error::IoError(io::Error::new(io::ErrorKind::Other, "this is an error")).to_string(),
             "io error: this is an error"
         );
         assert_eq!(

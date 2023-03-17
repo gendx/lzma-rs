@@ -1,3 +1,8 @@
+#[cfg(feature = "no_std")]
+use alloc::boxed::Box;
+#[cfg(feature = "no_std")]
+use core::ops::{Index, IndexMut};
+#[cfg(not(feature = "no_std"))]
 use std::ops::{Index, IndexMut};
 
 /// A 2 dimensional matrix in row-major order backed by a contiguous slice.

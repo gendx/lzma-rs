@@ -1,6 +1,9 @@
 use crate::compress::{Options, UnpackedSize};
 use crate::encode::rangecoder;
 use byteorder::{LittleEndian, WriteBytesExt};
+#[cfg(feature = "no_std")]
+use core2::io;
+#[cfg(not(feature = "no_std"))]
 use std::io;
 
 pub struct Encoder<'a, W>

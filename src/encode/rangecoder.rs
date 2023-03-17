@@ -1,4 +1,9 @@
+#[cfg(all(test, feature = "no_std"))]
+use alloc::vec::Vec;
 use byteorder::WriteBytesExt;
+#[cfg(feature = "no_std")]
+use core2::io;
+#[cfg(not(feature = "no_std"))]
 use std::io;
 
 #[cfg(test)]

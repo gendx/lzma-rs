@@ -5,6 +5,9 @@
 //! [spec]: https://tukaani.org/xz/xz-file-format.txt
 
 use crate::error;
+#[cfg(feature = "no_std")]
+use core2::io;
+#[cfg(not(feature = "no_std"))]
 use std::io;
 
 pub(crate) mod crc;
@@ -85,12 +88,19 @@ impl From<CheckMethod> for u8 {
 mod test {
     use super::*;
     use byteorder::{BigEndian, ReadBytesExt};
-    use std::io::{Seek, SeekFrom};
+    #[cfg(feature = "no_std")]
+    use core::u8::MAX as U8_MAX;
+    #[cfg(feature = "no_std")]
+    use core2::io::{self, Seek, SeekFrom};
+    #[cfg(not(feature = "no_std"))]
+    use std::io::{self, Seek, SeekFrom};
+    #[cfg(not(feature = "no_std"))]
+    use std::u8::MAX as U8_MAX;
 
     #[test]
     fn test_checkmethod_roundtrip() {
         let mut count_valid = 0;
-        for input in 0..std::u8::MAX {
+        for input in 0..U8_MAX {
             if let Ok(check) = CheckMethod::try_from(input) {
                 let output: u8 = check.into();
                 assert_eq!(input, output);
@@ -106,7 +116,7 @@ mod test {
             check_method: CheckMethod::Crc32,
         };
 
-        let mut cursor = std::io::Cursor::new(vec![0u8; 2]);
+        let mut cursor = io::Cursor::new(vec![0u8; 2]);
         let len = input.serialize(&mut cursor).unwrap();
         assert_eq!(len, 2);
 
