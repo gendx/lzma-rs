@@ -12,7 +12,7 @@ where
     range: u32,
     low: u64,
     cache: u8,
-    cachesz: u32,
+    cachesz: u64,
 }
 
 impl<'a, W> RangeEncoder<'a, W>
@@ -62,29 +62,6 @@ where
         Ok(())
     }
 
-    fn normalize(&mut self) -> io::Result<()> {
-        while self.range < 0x0100_0000 {
-            lzma_debug!(
-                "+ {{ range: {:08x}, low: {:010x}, cache: {:02x}, {} }}",
-                self.range,
-                self.low,
-                self.cache,
-                self.cachesz
-            );
-            self.range <<= 8;
-            self.write_low()?;
-            lzma_debug!(
-                "* {{ range: {:08x}, low: {:010x}, cache: {:02x}, {} }}",
-                self.range,
-                self.low,
-                self.cache,
-                self.cachesz
-            );
-        }
-        lzma_trace!("  {{ range: {:08x}, low: {:010x} }}", self.range, self.low);
-        Ok(())
-    }
-
     pub fn encode_bit(&mut self, prob: &mut u16, bit: bool) -> io::Result<()> {
         let bound: u32 = (self.range >> 11) * (*prob as u32);
         lzma_trace!(
@@ -103,7 +80,11 @@ where
             self.range = bound;
         }
 
-        self.normalize()
+        if self.range < 0x0100_0000 {
+            self.range <<= 8;
+            self.write_low()?;
+        }
+        Ok(())
     }
 
     #[cfg(test)]
