@@ -144,3 +144,11 @@ fn test_xz_block_check_crc32_invalid() {
         "xz error: Invalid footer CRC32: expected 0x01234567 but got 0x8b0d303e"
     )
 }
+
+#[test]
+fn test_xz_delta_filter() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+
+    decomp_big_file("tests/files/delta-filter-3.dat.xz", "tests/files/delta-filter-3.dat");
+}
