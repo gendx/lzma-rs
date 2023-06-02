@@ -229,7 +229,7 @@ where
 
     let decompress_filters = block_header.filters.iter().rev().collect::<Vec<_>>();
     let mut tmpbuf = Vec::with_capacity(block_header.unpacked_size.unwrap_or(1 << 12) as usize);
-    let packed_size = decode_filter(count_input, &mut tmpbuf, decompress_filters[0])? as u64;
+    let packed_size = decode_filter(count_input, &mut tmpbuf, decompress_filters[0])?;
     if let Some(expected_packed_size) = block_header.packed_size {
         if (packed_size as u64) != expected_packed_size {
             return Err(error::Error::XzError(format!(
