@@ -150,5 +150,8 @@ fn test_xz_delta_filter() {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
 
-    decomp_big_file("tests/files/delta-filter-3.dat.xz", "tests/files/delta-filter-3.dat");
+    decomp_big_file(
+        "tests/files/delta-filter-3.dat.xz",
+        "tests/files/delta-filter-3.dat",
+    );
 }

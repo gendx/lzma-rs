@@ -1,5 +1,5 @@
-use crate::decode::lzbuffer::LzBuffer;
 use crate::decode::lzbuffer;
+use crate::decode::lzbuffer::LzBuffer;
 use crate::error;
 use byteorder::ReadBytesExt;
 use std::io;
@@ -9,11 +9,11 @@ use std::io;
 pub struct DeltaDecoder {
     distance: usize,
     pos: u8,
-    delta: [u8; 256]
+    delta: [u8; 256],
 }
 
 impl DeltaDecoder {
-    /// Creates a new object ready for decompressing data that it's given.
+    /// Creates a new object ready for transforming data that it's given.
     pub fn new(property_distance: u8) -> Self {
         DeltaDecoder {
             distance: property_distance as usize + 1,
