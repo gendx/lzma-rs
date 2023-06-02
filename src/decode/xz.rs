@@ -1,5 +1,6 @@
 //! Decoder for the `.xz` file format.
 
+use crate::decode::delta::DeltaDecoder;
 use crate::decode::lzma2::Lzma2Decoder;
 use crate::decode::util;
 use crate::error;
@@ -173,15 +174,18 @@ where
 #[derive(Debug)]
 enum FilterId {
     Lzma2,
+    Delta,
 }
 
 fn get_filter_id(id: u64) -> error::Result<FilterId> {
     match id {
         0x21 => Ok(FilterId::Lzma2),
+        0x03 => Ok(FilterId::Delta),
         _ => Err(error::Error::XzError(format!("Unknown filter id {}", id))),
     }
 }
 
+#[derive(Debug)]
 struct Filter {
     filter_id: FilterId,
     props: Vec<u8>,
@@ -223,30 +227,21 @@ where
         )));
     }
 
-    let mut tmpbuf: Vec<u8> = Vec::new();
-    let filters = block_header.filters;
-    for (i, filter) in filters.iter().enumerate() {
-        if i == 0 {
-            // TODO: use SubBufRead on input if packed_size is known?
-            let packed_size = decode_filter(count_input, &mut tmpbuf, filter)?;
-            if let Some(expected_packed_size) = block_header.packed_size {
-                if (packed_size as u64) != expected_packed_size {
-                    return Err(error::Error::XzError(format!(
-                        "Invalid compressed size: expected {} but got {}",
-                        expected_packed_size, packed_size
-                    )));
-                }
-            }
-        } else {
-            let mut newbuf: Vec<u8> = Vec::new();
-            decode_filter(
-                &mut io::BufReader::new(tmpbuf.as_slice()),
-                &mut newbuf,
-                filter,
-            )?;
-            // TODO: does this move or copy?
-            tmpbuf = newbuf;
+    let decompress_filters = block_header.filters.iter().rev().collect::<Vec<_>>();
+    let mut tmpbuf = Vec::with_capacity(block_header.unpacked_size.unwrap_or(1 << 12) as usize);
+    let packed_size = decode_filter(count_input, &mut tmpbuf, decompress_filters[0])? as u64;
+    if let Some(expected_packed_size) = block_header.packed_size {
+        if (packed_size as u64) != expected_packed_size {
+            return Err(error::Error::XzError(format!(
+                "Invalid compressed size: expected {} but got {}",
+                expected_packed_size, packed_size
+            )));
         }
+    }
+    for filter in &decompress_filters[1..] {
+        let mut succ = Vec::with_capacity(block_header.unpacked_size.unwrap_or(1 << 12) as usize);
+        decode_filter(&mut (tmpbuf.as_slice()), &mut succ, filter)?;
+        tmpbuf = succ;
     }
 
     let unpacked_size = tmpbuf.len();
@@ -348,6 +343,16 @@ where
             }
             // TODO: properties??
             Lzma2Decoder::new().decompress(&mut count_input, output)?;
+            Ok(count_input.count())
+        }
+        FilterId::Delta => {
+            if filter.props.len() != 1 {
+                return Err(error::Error::XzError(format!(
+                    "Invalid properties for filter {:?}",
+                    filter.filter_id
+                )));
+            }
+            DeltaDecoder::new(filter.props[0]).decompress(&mut count_input, output)?;
             Ok(count_input.count())
         }
     }
