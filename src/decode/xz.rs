@@ -227,9 +227,10 @@ where
         )));
     }
 
-    let decompress_filters = block_header.filters.iter().rev().collect::<Vec<_>>();
+    let mut decompress_filters = block_header.filters.iter().rev();
+    let first_filter = decompress_filters.next().unwrap();
     let mut tmpbuf = Vec::with_capacity(block_header.unpacked_size.unwrap_or(1 << 12) as usize);
-    let packed_size = decode_filter(count_input, &mut tmpbuf, decompress_filters[0])?;
+    let packed_size = decode_filter(count_input, &mut tmpbuf, first_filter)?;
     if let Some(expected_packed_size) = block_header.packed_size {
         if (packed_size as u64) != expected_packed_size {
             return Err(error::Error::XzError(format!(
@@ -238,7 +239,7 @@ where
             )));
         }
     }
-    for filter in &decompress_filters[1..] {
+    for filter in decompress_filters {
         let mut succ = Vec::with_capacity(block_header.unpacked_size.unwrap_or(1 << 12) as usize);
         decode_filter(&mut (tmpbuf.as_slice()), &mut succ, filter)?;
         tmpbuf = succ;
