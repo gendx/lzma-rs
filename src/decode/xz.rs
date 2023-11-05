@@ -208,6 +208,13 @@ where
     R: io::BufRead,
     W: io::Write,
 {
+    // We use each block's "unpacked size" to pre-allocate tmpbuf to avoid the
+    // need to resize. The unpacked size is not a required field on the block,
+    // however, so we need to pick a default when it is not present. A default
+    // size of 4KiB (2^12) is a common page size and strikes a balance between
+    // over-allocating and creating many small allocations.
+    const DEFAULT_TMPBUF_SIZE: u64 = 4_096;
+
     let mut digest = CRC32.digest();
     digest.update(&[header_size]);
     let header_size = ((header_size as u64) << 2) - 1;
@@ -229,7 +236,7 @@ where
 
     let mut decompress_filters = block_header.filters.iter().rev();
     let first_filter = decompress_filters.next().unwrap();
-    let mut tmpbuf = Vec::with_capacity(block_header.unpacked_size.unwrap_or(1 << 12) as usize);
+    let mut tmpbuf = Vec::with_capacity(block_header.unpacked_size.unwrap_or(DEFAULT_TMPBUF_SIZE) as usize);
     let packed_size = decode_filter(count_input, &mut tmpbuf, first_filter)?;
     if let Some(expected_packed_size) = block_header.packed_size {
         if (packed_size as u64) != expected_packed_size {
@@ -240,7 +247,7 @@ where
         }
     }
     for filter in decompress_filters {
-        let mut succ = Vec::with_capacity(block_header.unpacked_size.unwrap_or(1 << 12) as usize);
+        let mut succ = Vec::with_capacity(block_header.unpacked_size.unwrap_or(DEFAULT_TMPBUF_SIZE) as usize);
         decode_filter(&mut (tmpbuf.as_slice()), &mut succ, filter)?;
         tmpbuf = succ;
     }
