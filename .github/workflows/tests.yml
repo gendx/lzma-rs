@@ -11,7 +11,7 @@ jobs:
           - stable
           - beta
           - nightly
-          - 1.62.0  # MSRV
+          - 1.65.0  # MSRV
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
