@@ -1,13 +1,6 @@
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
-use std::io::{BufReader, Cursor, Read};
-
-/// Utility function to read a file into memory
-fn read_all_file(filename: &str) -> std::io::Result<Vec<u8>> {
-    let mut data = Vec::new();
-    std::fs::File::open(filename).and_then(|mut file| file.read_to_end(&mut data))?;
-    Ok(data)
-}
+use std::{fs, io::{BufReader, Cursor, Read}};
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
@@ -23,7 +16,7 @@ fn round_trip(x: &[u8]) {
 }
 
 fn round_trip_file(filename: &str) {
-    let x = read_all_file(filename).unwrap();
+    let x = fs::read(filename).unwrap();
     round_trip(x.as_slice());
 }
 
@@ -52,8 +45,8 @@ fn round_trip_files() {
 }
 
 fn decomp_big_file(compfile: &str, plainfile: &str) {
-    let expected = read_all_file(plainfile).unwrap();
-    let mut f = BufReader::new(std::fs::File::open(compfile).unwrap());
+    let expected = fs::read(plainfile).unwrap();
+    let mut f = BufReader::new(fs::File::open(compfile).unwrap());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::xz_decompress(&mut f, &mut decomp).unwrap();
     assert!(decomp == expected)
@@ -126,7 +119,7 @@ fn test_xz_block_check_crc32_invalid() {
 
     let testcase = "tests/files/block-check-crc32.txt.xz";
     let mut corrupted = {
-        let mut buf = read_all_file(testcase).unwrap();
+        let mut buf = fs::read(testcase).unwrap();
         // Mangle the "Block Check" field.
         buf[0x54] = 0x67;
         buf[0x55] = 0x45;
