@@ -1,13 +1,7 @@
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
-use std::io::{BufReader, Cursor, Read};
-
-/// Utility function to read a file into memory
-fn read_all_file(filename: &str) -> std::io::Result<Vec<u8>> {
-    let mut data = Vec::new();
-    std::fs::File::open(filename).and_then(|mut file| file.read_to_end(&mut data))?;
-    Ok(data)
-}
+use std::{fs, io::{BufRead, BufReader, Cursor, Read}};
+use xz2::stream;
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
@@ -23,7 +17,7 @@ fn round_trip(x: &[u8]) {
 }
 
 fn round_trip_file(filename: &str) {
-    let x = read_all_file(filename).unwrap();
+    let x = fs::read(filename).unwrap();
     round_trip(x.as_slice());
 }
 
@@ -51,9 +45,26 @@ fn round_trip_files() {
     round_trip_file("tests/files/foo.txt");
 }
 
+fn decode_xz_xz2<R: BufRead>(f: R) -> Vec<u8> {
+    // create new XZ decompression stream with 8Gb memory limit and checksum
+    // verification disabled
+    let xz_stream =
+        stream::Stream::new_stream_decoder(8 * 1024 * 1024 * 1024, stream::IGNORE_CHECK)
+            .expect("Failed to create stream");
+    let mut decomp: Vec<u8> = Vec::new();
+    xz2::bufread::XzDecoder::new_stream(f, xz_stream).read_to_end(&mut decomp).unwrap();
+    decomp
+}
+
 fn decomp_big_file(compfile: &str, plainfile: &str) {
-    let expected = read_all_file(plainfile).unwrap();
-    let mut f = BufReader::new(std::fs::File::open(compfile).unwrap());
+    let expected = fs::read(plainfile).unwrap();
+
+    // Decode with the reference implementation to ensure our test case is accurate
+    let mut f = BufReader::new(fs::File::open(compfile).unwrap());
+    let decomp = decode_xz_xz2(f);
+    assert!(decomp == expected);
+
+    let mut f = BufReader::new(fs::File::open(compfile).unwrap());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::xz_decompress(&mut f, &mut decomp).unwrap();
     assert!(decomp == expected)
@@ -126,7 +137,7 @@ fn test_xz_block_check_crc32_invalid() {
 
     let testcase = "tests/files/block-check-crc32.txt.xz";
     let mut corrupted = {
-        let mut buf = read_all_file(testcase).unwrap();
+        let mut buf = fs::read(testcase).unwrap();
         // Mangle the "Block Check" field.
         buf[0x54] = 0x67;
         buf[0x55] = 0x45;
@@ -143,4 +154,15 @@ fn test_xz_block_check_crc32_invalid() {
         err_msg,
         "xz error: Invalid footer CRC32: expected 0x01234567 but got 0x8b0d303e"
     )
+}
+
+#[test]
+fn test_xz_delta_filter() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+
+    decomp_big_file(
+        "tests/files/delta-filter-3.dat.xz",
+        "tests/files/delta-filter-3.dat",
+    );
 }

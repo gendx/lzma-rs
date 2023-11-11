@@ -1,5 +1,6 @@
 //! Decoding logic.
 
+pub mod delta;
 pub mod lzbuffer;
 pub mod lzma;
 pub mod lzma2;

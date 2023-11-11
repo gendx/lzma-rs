@@ -1,5 +1,6 @@
 //! Decoder for the `.xz` file format.
 
+use crate::decode::delta::DeltaDecoder;
 use crate::decode::lzma2::Lzma2Decoder;
 use crate::decode::util;
 use crate::error;
@@ -173,15 +174,18 @@ where
 #[derive(Debug)]
 enum FilterId {
     Lzma2,
+    Delta,
 }
 
 fn get_filter_id(id: u64) -> error::Result<FilterId> {
     match id {
         0x21 => Ok(FilterId::Lzma2),
+        0x03 => Ok(FilterId::Delta),
         _ => Err(error::Error::XzError(format!("Unknown filter id {}", id))),
     }
 }
 
+#[derive(Debug)]
 struct Filter {
     filter_id: FilterId,
     props: Vec<u8>,
@@ -204,6 +208,13 @@ where
     R: io::BufRead,
     W: io::Write,
 {
+    // We use each block's "unpacked size" to pre-allocate tmpbuf to avoid the
+    // need to resize. The unpacked size is not a required field on the block,
+    // however, so we need to pick a default when it is not present. A default
+    // size of 4KiB (2^12) is a common page size and strikes a balance between
+    // over-allocating and creating many small allocations.
+    const DEFAULT_TMPBUF_SIZE: u64 = 4_096;
+
     let mut digest = CRC32.digest();
     digest.update(&[header_size]);
     let header_size = ((header_size as u64) << 2) - 1;
@@ -223,30 +234,23 @@ where
         )));
     }
 
-    let mut tmpbuf: Vec<u8> = Vec::new();
-    let filters = block_header.filters;
-    for (i, filter) in filters.iter().enumerate() {
-        if i == 0 {
-            // TODO: use SubBufRead on input if packed_size is known?
-            let packed_size = decode_filter(count_input, &mut tmpbuf, filter)?;
-            if let Some(expected_packed_size) = block_header.packed_size {
-                if (packed_size as u64) != expected_packed_size {
-                    return Err(error::Error::XzError(format!(
-                        "Invalid compressed size: expected {} but got {}",
-                        expected_packed_size, packed_size
-                    )));
-                }
-            }
-        } else {
-            let mut newbuf: Vec<u8> = Vec::new();
-            decode_filter(
-                &mut io::BufReader::new(tmpbuf.as_slice()),
-                &mut newbuf,
-                filter,
-            )?;
-            // TODO: does this move or copy?
-            tmpbuf = newbuf;
+    let mut decompress_filters = block_header.filters.iter().rev();
+    // In read_block_header, num_filters is always at least 1, so it is safe to unwrap here.
+    let first_filter = decompress_filters.next().expect("num_filters is at least 1");
+    let mut tmpbuf = Vec::with_capacity(block_header.unpacked_size.unwrap_or(DEFAULT_TMPBUF_SIZE) as usize);
+    let packed_size = decode_filter(count_input, &mut tmpbuf, first_filter)?;
+    if let Some(expected_packed_size) = block_header.packed_size {
+        if (packed_size as u64) != expected_packed_size {
+            return Err(error::Error::XzError(format!(
+                "Invalid compressed size: expected {} but got {}",
+                expected_packed_size, packed_size
+            )));
         }
+    }
+    for filter in decompress_filters {
+        let mut succ = Vec::with_capacity(block_header.unpacked_size.unwrap_or(DEFAULT_TMPBUF_SIZE) as usize);
+        decode_filter(&mut (tmpbuf.as_slice()), &mut succ, filter)?;
+        tmpbuf = succ;
     }
 
     let unpacked_size = tmpbuf.len();
@@ -348,6 +352,16 @@ where
             }
             // TODO: properties??
             Lzma2Decoder::new().decompress(&mut count_input, output)?;
+            Ok(count_input.count())
+        }
+        FilterId::Delta => {
+            if filter.props.len() != 1 {
+                return Err(error::Error::XzError(format!(
+                    "Invalid properties for filter {:?}",
+                    filter.filter_id
+                )));
+            }
+            DeltaDecoder::new(filter.props[0]).decompress(&mut count_input, output)?;
             Ok(count_input.count())
         }
     }
