@@ -1,24 +1,22 @@
-use crate::decode::lzbuffer;
-use crate::decode::lzbuffer::LzBuffer;
-use crate::error;
+use crate::{error, decode::lzbuffer::{self, LzBuffer}};
 use byteorder::ReadBytesExt;
-use std::io;
+use std::{num::Wrapping, io};
 
 #[derive(Debug)]
 /// Decoder for XZ delta-encoded blocks (filter 3).
 pub struct DeltaDecoder {
-    distance: usize,
-    pos: u8,
-    delta: [u8; 256],
+    distance: Wrapping<u8>,
+    pos: Wrapping<u8>,
+    delta: [Wrapping<u8>; 256],
 }
 
 impl DeltaDecoder {
     /// Creates a new object ready for transforming data that it's given.
     pub fn new(property_distance: u8) -> Self {
         DeltaDecoder {
-            distance: property_distance as usize + 1,
-            pos: 0,
-            delta: [0u8; 256],
+            distance: Wrapping(property_distance) + Wrapping(1),
+            pos: Wrapping(0u8),
+            delta: [Wrapping(0u8); 256],
         }
     }
 
@@ -29,8 +27,8 @@ impl DeltaDecoder {
     /// previously allocated resources.
     #[cfg(feature = "raw_decoder")]
     pub fn reset(&mut self) {
-        self.pos = 0;
-        self.delta = [0u8; 256];
+        self.pos = Wrapping(0u8);
+        self.delta = [Wrapping(0u8); 256];
     }
 
     /// Decompresses the input data into the output, consuming only as much
@@ -45,18 +43,15 @@ impl DeltaDecoder {
         // See xz-file-format.txt for the C pseudocode this is implementing.
         loop {
             let byte = if let Ok(byte) = input.read_u8() {
-                byte
+                Wrapping(byte)
             } else {
                 lzma_info!("Delta end of input");
                 break;
             };
 
-            let tmp = self.delta[(self.distance + self.pos as usize) as u8 as usize];
-            let tmp = byte.wrapping_add(tmp);
-            self.delta[self.pos as usize] = tmp;
-
-            accum.append_literal(tmp)?;
-            self.pos = self.pos.wrapping_sub(1);
+            self.delta[self.pos.0 as usize] = byte + self.delta[(self.pos - self.distance).0 as usize];
+            accum.append_literal(self.delta[self.pos.0 as usize].0)?;
+            self.pos += 1;
         }
 
         accum.finish()?;
