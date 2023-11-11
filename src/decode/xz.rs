@@ -235,7 +235,8 @@ where
     }
 
     let mut decompress_filters = block_header.filters.iter().rev();
-    let first_filter = decompress_filters.next().unwrap();
+    // In read_block_header, num_filters is always at least 1, so it is safe to unwrap here.
+    let first_filter = decompress_filters.next().expect("num_filters is at least 1");
     let mut tmpbuf = Vec::with_capacity(block_header.unpacked_size.unwrap_or(DEFAULT_TMPBUF_SIZE) as usize);
     let packed_size = decode_filter(count_input, &mut tmpbuf, first_filter)?;
     if let Some(expected_packed_size) = block_header.packed_size {
