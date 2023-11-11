@@ -1,6 +1,7 @@
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
-use std::{fs, io::{BufReader, Cursor, Read}};
+use std::{fs, io::{BufRead, BufReader, Cursor, Read}};
+use xz2::stream;
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
@@ -44,8 +45,25 @@ fn round_trip_files() {
     round_trip_file("tests/files/foo.txt");
 }
 
+fn decode_xz_xz2<R: BufRead>(f: R) -> Vec<u8> {
+    // create new XZ decompression stream with 8Gb memory limit and checksum
+    // verification disabled
+    let xz_stream =
+        stream::Stream::new_stream_decoder(8 * 1024 * 1024 * 1024, stream::IGNORE_CHECK)
+            .expect("Failed to create stream");
+    let mut decomp: Vec<u8> = Vec::new();
+    xz2::bufread::XzDecoder::new_stream(f, xz_stream).read_to_end(&mut decomp).unwrap();
+    decomp
+}
+
 fn decomp_big_file(compfile: &str, plainfile: &str) {
     let expected = fs::read(plainfile).unwrap();
+
+    // Decode with the reference implementation to ensure our test case is accurate
+    let mut f = BufReader::new(fs::File::open(compfile).unwrap());
+    let decomp = decode_xz_xz2(f);
+    assert!(decomp == expected);
+
     let mut f = BufReader::new(fs::File::open(compfile).unwrap());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::xz_decompress(&mut f, &mut decomp).unwrap();
