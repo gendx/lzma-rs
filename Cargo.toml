@@ -1,7 +1,7 @@
 [package]
 name = "lzma-rs"
 description = "A codec for LZMA, LZMA2 and XZ written in pure Rust"
-version = "0.3.0"
+version = "0.3.0-dev"
 license = "MIT"
 authors = ["Guillaume Endignoux <ggendx@gmail.com>"]
 repository = "https://github.com/gendx/lzma-rs"
