@@ -20,15 +20,18 @@ where
     fn append_lz(&mut self, len: usize, dist: usize) -> error::Result<()>;
 
     /// Get a reference to the output sink.
+    #[cfg(feature = "stream")]
     fn get_output(&self) -> &W;
 
     /// Get a mutable reference to the output sink.
+    #[cfg(feature = "stream")]
     fn get_output_mut(&mut self) -> &mut W;
 
     /// Consumes this buffer and flushes any data.
     fn finish(self) -> io::Result<W>;
 
     /// Consumes this buffer without flushing any data.
+    #[cfg(feature = "stream")]
     fn into_output(self) -> W;
 }
 
@@ -139,10 +142,12 @@ where
         Ok(())
     }
 
+    #[cfg(feature = "stream")]
     fn get_output(&self) -> &W {
         &self.stream
     }
 
+    #[cfg(feature = "stream")]
     fn get_output_mut(&mut self) -> &mut W {
         &mut self.stream
     }
@@ -153,6 +158,7 @@ where
         Ok(self.stream)
     }
 
+    #[cfg(feature = "stream")]
     fn into_output(self) -> W {
         self.stream
     }
@@ -290,10 +296,12 @@ where
         Ok(())
     }
 
+    #[cfg(feature = "stream")]
     fn get_output(&self) -> &W {
         &self.stream
     }
 
+    #[cfg(feature = "stream")]
     fn get_output_mut(&mut self) -> &mut W {
         &mut self.stream
     }
@@ -306,6 +314,7 @@ where
         Ok(self.stream)
     }
 
+    #[cfg(feature = "stream")]
     fn into_output(self) -> W {
         self.stream
     }
