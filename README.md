@@ -2,11 +2,12 @@
 
 [![Crate](https://img.shields.io/crates/v/lzma-rs.svg?logo=rust)](https://crates.io/crates/lzma-rs)
 [![Documentation](https://img.shields.io/docsrs/lzma-rs?logo=rust)](https://docs.rs/lzma-rs)
+[![Minimum Rust 1.65](https://img.shields.io/badge/rust-1.65%2B-orange.svg?logo=rust)](https://releases.rs/docs/1.65.0/)
+[![Dependencies](https://deps.rs/repo/github/gendx/lzma-rs/status.svg)](https://deps.rs/repo/github/gendx/lzma-rs)
 [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg?logo=rust)](https://github.com/rust-secure-code/safety-dance/)
 ![Build Status](https://github.com/gendx/lzma-rs/workflows/Build%20and%20run%20tests/badge.svg)
-[![Minimum Rust 1.65](https://img.shields.io/badge/rust-1.65%2B-orange.svg?logo=rust)](https://releases.rs/docs/1.65.0/)
 [![Codecov](https://codecov.io/gh/gendx/lzma-rs/branch/master/graph/badge.svg?token=HVo74E0wzh)](https://codecov.io/gh/gendx/lzma-rs)
-[![Lines of Code](https://tokei.rs/b1/github/gendx/lzma-rs?category=code)](https://github.com/gendx/lzma-rs)
+[![Lines of Code](https://www.aschey.tech/tokei/github/gendx/lzma-rs?category=code)](https://github.com/aschey/vercel-tokei)
 [![Downloads (crates.io)](https://img.shields.io/crates/d/lzma-rs?label=downloads&logo=rust)](https://crates.io/crates/lzma-rs)
 
 This project is a decoder for LZMA and its variants written in pure Rust, with focus on clarity.

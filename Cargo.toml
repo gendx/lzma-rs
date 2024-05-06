@@ -10,6 +10,7 @@ categories = ["compression"]
 keywords = ["lzma", "compression", "decompression"]
 exclude = ["tests/*", "benches/*", "fuzz/*", ".github/*", "Cargo.lock"]
 edition = "2018"
+rust-version = "1.65.0"
 
 [dependencies]
 byteorder = "1.4.3"
