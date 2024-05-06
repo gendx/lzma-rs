@@ -16,7 +16,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       RUSTFLAGS: "-D warnings"
-      CARGO_UNSTABLE_SPARSE_REGISTRY: true
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
