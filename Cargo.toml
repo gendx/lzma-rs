@@ -21,6 +21,7 @@ env_logger = { version = "0.11.3", optional = true }
 [dev-dependencies]
 rust-lzma = "0.6"
 seq-macro = "0.3"
+xz2 = "0.1.6"
 
 [features]
 enable_logging = ["env_logger", "log"]
