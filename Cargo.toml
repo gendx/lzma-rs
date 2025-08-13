@@ -10,10 +10,10 @@ categories = ["compression"]
 keywords = ["lzma", "compression", "decompression"]
 exclude = ["tests/*", "benches/*", "fuzz/*", ".github/*", "Cargo.lock"]
 edition = "2018"
-rust-version = "1.71.0"
+rust-version = "1.78.0"
 
 [dependencies]
-byteorder = "1.4.3"
+byteorder = { version = "1.4.3", default-features = false }
 crc = "3.0.0"
 log = { version = "0.4.17", optional = true }
 env_logger = { version = "0.11.3", optional = true }
@@ -23,10 +23,12 @@ rust-lzma = "0.6"
 seq-macro = "0.3"
 
 [features]
+default = ["std"]
 enable_logging = ["env_logger", "log"]
-stream = []
+std = ["byteorder/std"]
+stream = ["std"]
 raw_decoder = []
 
 [package.metadata.docs.rs]
-features = ["stream", "raw_decoder"]
+features = ["std", "stream", "raw_decoder"]
 rustdoc-args = ["--cfg", "docsrs"]

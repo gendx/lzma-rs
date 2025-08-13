@@ -1,10 +1,12 @@
 use crate::decode::lzbuffer::{LzBuffer, LzCircularBuffer};
 use crate::decode::rangecoder::{BitTree, LenDecoder, RangeDecoder};
 use crate::decompress::{Options, UnpackedSize};
-use crate::error;
 use crate::util::vec2d::Vec2D;
-use byteorder::{LittleEndian, ReadBytesExt};
-use std::io;
+use crate::{error, io};
+use alloc::format;
+use alloc::string::String;
+use byteorder::LittleEndian;
+use io::ReadBytes;
 
 /// Maximum input data that can be processed in one iteration.
 /// Libhtp uses the following equation to define the maximum number of bits
@@ -165,7 +167,7 @@ impl LzmaParams {
 pub(crate) struct DecoderState {
     // Buffer input data here if we need more for decompression. Up to
     // MAX_REQUIRED_INPUT bytes can be consumed during one iteration.
-    partial_input_buf: std::io::Cursor<[u8; MAX_REQUIRED_INPUT]>,
+    partial_input_buf: io::Cursor<[u8; MAX_REQUIRED_INPUT]>,
     pub(crate) lzma_props: LzmaProperties,
     unpacked_size: Option<u64>,
     literal_probs: Vec2D<u16>,
@@ -188,7 +190,7 @@ impl DecoderState {
     pub fn new(lzma_props: LzmaProperties, unpacked_size: Option<u64>) -> Self {
         lzma_props.validate();
         DecoderState {
-            partial_input_buf: std::io::Cursor::new([0; MAX_REQUIRED_INPUT]),
+            partial_input_buf: io::Cursor::new([0; MAX_REQUIRED_INPUT]),
             lzma_props,
             unpacked_size,
             literal_probs: Vec2D::init(0x400, (1 << (lzma_props.lc + lzma_props.lp), 0x300)),
@@ -412,7 +414,7 @@ impl DecoderState {
         range: u32,
         code: u32,
     ) -> error::Result<()> {
-        let mut temp = std::io::Cursor::new(buf);
+        let mut temp = io::Cursor::new(buf);
         let mut rangecoder = RangeDecoder::from_parts(&mut temp, range, code);
         let _ = self.process_next_inner(output, &mut rangecoder, false)?;
         Ok(())

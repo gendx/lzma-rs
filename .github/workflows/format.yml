@@ -8,7 +8,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
-
+      - name: Install rustfmt
+        run: rustup component add rustfmt
       - name: Check formatting
         run: cargo fmt --verbose -- --check --verbose
       - name: Check formatting on fuzzing

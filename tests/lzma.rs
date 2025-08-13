@@ -1,10 +1,12 @@
 extern crate lzma;
 
+use lzma_rs::io;
+
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
-use std::io::Read;
 #[cfg(feature = "stream")]
-use std::io::Write;
+use lzma_rs::io::Write;
+use std::io::Read;
 
 /// Utility function to read a file into memory
 fn read_all_file(filename: &str) -> std::io::Result<Vec<u8>> {
@@ -29,7 +31,9 @@ fn round_trip(x: &[u8]) {
 
 fn round_trip_no_options(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
-    lzma_rs::lzma_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
+
+    lzma_rs::lzma_compress(&mut io::BufReader::new(x), &mut compressed).unwrap();
+
     #[cfg(feature = "enable_logging")]
     info!("Compressed {} -> {} bytes", x.len(), compressed.len());
     #[cfg(feature = "enable_logging")]
@@ -45,7 +49,7 @@ fn assert_round_trip_with_options(
 ) {
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::lzma_compress_with_options(
-        &mut std::io::BufReader::new(x),
+        &mut io::BufReader::new(x),
         &mut compressed,
         encode_options,
     )
@@ -57,7 +61,7 @@ fn assert_round_trip_with_options(
 
     // test non-streaming decompression
     {
-        let mut bf = std::io::BufReader::new(compressed.as_slice());
+        let mut bf = lzma_rs::io::BufReader::new(compressed.as_slice());
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress_with_options(&mut bf, &mut decomp, decode_options).unwrap();
         assert_eq!(decomp, x);
@@ -100,7 +104,7 @@ fn round_trip_file(filename: &str) {
 fn assert_decomp_eq(compressed: &[u8], expected: &[u8], compare_to_liblzma: bool) {
     // Test regular decompression.
     {
-        let mut input = std::io::BufReader::new(compressed);
+        let mut input = lzma_rs::io::BufReader::new(compressed);
         let mut decomp: Vec<u8> = Vec::new();
         lzma_rs::lzma_decompress(&mut input, &mut decomp).unwrap();
         assert_eq!(decomp, expected);
@@ -139,7 +143,7 @@ fn decompress_short_header() {
     let _ = env_logger::try_init();
     let mut decomp: Vec<u8> = Vec::new();
     // TODO: compare io::Errors?
-    lzma_rs::lzma_decompress(&mut (b"" as &[u8]), &mut decomp).unwrap();
+    lzma_rs::lzma_decompress(&mut lzma_rs::io::Cursor::new(b"" as &[u8]), &mut decomp).unwrap();
 }
 
 #[test]
@@ -316,7 +320,7 @@ fn memlimit() {
 
     let mut compressed: Vec<u8> = Vec::new();
     lzma_rs::lzma_compress_with_options(
-        &mut std::io::BufReader::new(&data[..]),
+        &mut lzma_rs::io::BufReader::new(&data[..]),
         &mut compressed,
         &encode_options,
     )
@@ -324,7 +328,7 @@ fn memlimit() {
 
     // test non-streaming decompression
     {
-        let mut bf = std::io::BufReader::new(compressed.as_slice());
+        let mut bf = lzma_rs::io::BufReader::new(compressed.as_slice());
         let mut decomp: Vec<u8> = Vec::new();
         let error = lzma_rs::lzma_decompress_with_options(&mut bf, &mut decomp, &decode_options)
             .unwrap_err();

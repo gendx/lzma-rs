@@ -7,7 +7,7 @@ macro_rules! const_assert {
         impl<$(const $list: $ty,)*> Assert<$($list,)*> {
             const OK: () = {
                 if !($expr) {
-                    ::std::panic!(::std::concat!("assertion failed: ", $message));
+                    ::core::panic!(::core::concat!("assertion failed: ", $message));
                 }
             };
         }

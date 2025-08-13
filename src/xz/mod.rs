@@ -4,8 +4,8 @@
 //!
 //! [spec]: https://tukaani.org/xz/xz-file-format.txt
 
-use crate::error;
-use std::io;
+use crate::{error, io};
+use alloc::format;
 
 pub(crate) mod crc;
 pub(crate) mod footer;
@@ -43,9 +43,7 @@ impl StreamFlags {
         W: io::Write,
     {
         // First byte is currently unused and hard-coded to null.
-        writer
-            .write(&[0x00, self.check_method as u8])
-            .map_err(Into::into)
+        writer.write(&[0x00, self.check_method as u8])
     }
 }
 
@@ -84,13 +82,17 @@ impl From<CheckMethod> for u8 {
 #[cfg(test)]
 mod test {
     use super::*;
-    use byteorder::{BigEndian, ReadBytesExt};
+    use alloc::vec;
+    use byteorder::BigEndian;
+    use io::ReadBytes;
+
+    #[cfg(feature = "std")]
     use std::io::{Seek, SeekFrom};
 
     #[test]
     fn test_checkmethod_roundtrip() {
         let mut count_valid = 0;
-        for input in 0..std::u8::MAX {
+        for input in 0..u8::MAX {
             if let Ok(check) = CheckMethod::try_from(input) {
                 let output: u8 = check.into();
                 assert_eq!(input, output);
@@ -106,11 +108,16 @@ mod test {
             check_method: CheckMethod::Crc32,
         };
 
-        let mut cursor = std::io::Cursor::new(vec![0u8; 2]);
+        let mut cursor = io::Cursor::new(vec![0u8; 2]);
         let len = input.serialize(&mut cursor).unwrap();
         assert_eq!(len, 2);
 
+        #[cfg(not(feature = "std"))]
+        cursor.set_position(0);
+
+        #[cfg(feature = "std")]
         cursor.seek(SeekFrom::Start(0)).unwrap();
+
         let field = cursor.read_u16::<BigEndian>().unwrap();
         let output = StreamFlags::parse(field).unwrap();
         assert_eq!(input, output);

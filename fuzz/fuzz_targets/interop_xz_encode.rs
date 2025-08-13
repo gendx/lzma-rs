@@ -8,7 +8,7 @@ use xz2::stream;
 
 fn encode_xz_lzmars(x: &[u8]) -> Result<Vec<u8>> {
     let mut compressed: Vec<u8> = Vec::new();
-    lzma_rs::xz_compress(&mut std::io::BufReader::new(x), &mut compressed)?;
+    lzma_rs::xz_compress(&mut lzma_rs::io::BufReader::new(x), &mut compressed)?;
     Ok(compressed)
 }
 

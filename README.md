@@ -2,7 +2,7 @@
 
 [![Crate](https://img.shields.io/crates/v/lzma-rs.svg?logo=rust)](https://crates.io/crates/lzma-rs)
 [![Documentation](https://img.shields.io/docsrs/lzma-rs?logo=rust)](https://docs.rs/lzma-rs)
-[![Minimum Rust 1.71](https://img.shields.io/badge/rust-1.71%2B-orange.svg?logo=rust)](https://releases.rs/docs/1.71.0/)
+[![Minimum Rust 1.78](https://img.shields.io/badge/rust-1.78%2B-orange.svg?logo=rust)](https://releases.rs/docs/1.78.0/)
 [![Dependencies](https://deps.rs/repo/github/gendx/lzma-rs/status.svg)](https://deps.rs/repo/github/gendx/lzma-rs)
 [![Safety Dance](https://img.shields.io/badge/unsafe-forbidden-success.svg?logo=rust)](https://github.com/rust-secure-code/safety-dance/)
 ![Build Status](https://github.com/gendx/lzma-rs/workflows/Build%20and%20run%20tests/badge.svg)
@@ -24,6 +24,19 @@ let mut f = std::io::BufReader::new(std::fs::File::open(filename).unwrap());
 let mut decomp: Vec<u8> = Vec::new();
 lzma_rs::xz_decompress(&mut f, &mut decomp).unwrap();
 // Decompressed content is now in "decomp"
+```
+
+Compress a slice into a vector in a `no_std` environment.
+```rust
+#![no_std]
+extern crate alloc;
+use alloc::vec::Vec;
+
+let data: &[u8] = gather_my_data();
+let compressed_data: Vec<u8> = Vec::new();
+
+lzma_rs::lzma_compress(&mut lzma_compress::io::Cursor::new(data), compressed_data).unwrap();
+// Compressed content is now in decomp
 ```
 
 ## Encoder

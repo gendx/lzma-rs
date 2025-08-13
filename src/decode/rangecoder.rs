@@ -1,8 +1,8 @@
 use crate::decode::util;
-use crate::error;
+use crate::io::ReadBytes;
 use crate::util::const_assert;
-use byteorder::{BigEndian, ReadBytesExt};
-use std::io;
+use crate::{error, io};
+use byteorder::BigEndian;
 
 pub struct RangeDecoder<'a, R>
 where

@@ -1,5 +1,5 @@
-use byteorder::WriteBytesExt;
-use std::io;
+use crate::io;
+use io::WriteBytes;
 
 #[cfg(test)]
 use crate::util::const_assert;
@@ -278,8 +278,9 @@ mod test {
     use super::*;
     use crate::decode::rangecoder::{LenDecoder, RangeDecoder};
     use crate::{decode, encode};
+    use alloc::vec::Vec;
+    use io::BufReader;
     use seq_macro::seq;
-    use std::io::BufReader;
 
     fn encode_decode(prob_init: u16, bits: &[bool]) {
         let mut buf: Vec<u8> = Vec::new();

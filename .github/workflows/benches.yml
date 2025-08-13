@@ -8,5 +8,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
+      - name: Install liblzma-dev
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y liblzma-dev
       - name: Build benches
-        run: cargo build --benches --verbose
+        run: cargo +nightly build --benches --verbose
+      - name: Build benches (no default features)
+        run: cargo +nightly build --no-default-features --benches --verbose

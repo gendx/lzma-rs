@@ -10,7 +10,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-
+      - name: Install liblzma-dev
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y liblzma-dev
+      - name: Install clippy
+        run: rustup component add clippy
       - name: Check Clippy lints
         run: cargo clippy --verbose --all-features -- -W clippy::match-same-arms
       - name: Check Clippy lints on tests

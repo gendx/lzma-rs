@@ -6,8 +6,8 @@ use lzma_rs::error::Result;
 
 fn round_trip_lzma2(x: &[u8]) -> Result<Vec<u8>> {
     let mut compressed: Vec<u8> = Vec::new();
-    lzma_rs::lzma2_compress(&mut std::io::BufReader::new(x), &mut compressed)?;
-    let mut bf = std::io::BufReader::new(compressed.as_slice());
+    lzma_rs::lzma2_compress(&mut lzma_rs::io::BufReader::new(x), &mut compressed)?;
+    let mut bf = lzma_rs::io::BufReader::new(compressed.as_slice());
 
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::lzma2_decompress(&mut bf, &mut decomp)?;

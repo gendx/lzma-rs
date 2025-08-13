@@ -236,13 +236,10 @@ where
                         let position = self.tmp.position();
                         let bytes_read =
                             input.read(&mut self.tmp.get_mut()[position as usize..])?;
-                        let bytes_read = if bytes_read < std::u64::MAX as usize {
+                        let bytes_read = if bytes_read < u64::MAX as usize {
                             bytes_read as u64
                         } else {
-                            return Err(io::Error::new(
-                                io::ErrorKind::Other,
-                                "Failed to convert integer to u64.",
-                            ));
+                            return Err(io::Error::other("Failed to convert integer to u64."));
                         };
                         self.tmp.set_position(position + bytes_read);
 
@@ -277,11 +274,10 @@ where
                                 // reset the cursor because we may have partial reads
                                 input.set_position(0);
                                 let bytes_read = input.read(&mut self.tmp.get_mut()[..])?;
-                                let bytes_read = if bytes_read < std::u64::MAX as usize {
+                                let bytes_read = if bytes_read < u64::MAX as usize {
                                     bytes_read as u64
                                 } else {
-                                    return Err(io::Error::new(
-                                        io::ErrorKind::Other,
+                                    return Err(io::Error::other(
                                         "Failed to convert integer to u64.",
                                     ));
                                 };
@@ -299,9 +295,7 @@ where
                         Err(e) => {
                             return Err(match e {
                                 Error::IoError(e) | Error::HeaderTooShort(e) => e,
-                                Error::LzmaError(e) | Error::XzError(e) => {
-                                    io::Error::new(io::ErrorKind::Other, e)
-                                }
+                                Error::LzmaError(e) | Error::XzError(e) => io::Error::other(e),
                             });
                         }
                     }
@@ -341,7 +335,7 @@ where
 
 impl From<Error> for io::Error {
     fn from(error: Error) -> io::Error {
-        io::Error::new(io::ErrorKind::Other, format!("{:?}", error))
+        io::Error::other(format!("{:?}", error))
     }
 }
 

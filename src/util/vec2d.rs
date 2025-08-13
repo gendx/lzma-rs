@@ -1,4 +1,6 @@
-use std::ops::{Index, IndexMut};
+use alloc::boxed::Box;
+use alloc::vec;
+use core::ops::{Index, IndexMut};
 
 /// A 2 dimensional matrix in row-major order backed by a contiguous slice.
 #[derive(Debug)]

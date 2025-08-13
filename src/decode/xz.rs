@@ -1,13 +1,18 @@
 //! Decoder for the `.xz` file format.
 
+use crate::alloc::string::ToString;
 use crate::decode::lzma2::Lzma2Decoder;
 use crate::decode::util;
-use crate::error;
+use crate::{error, io};
+use io::Read;
+
 use crate::xz::crc::{CRC32, CRC64};
 use crate::xz::{footer, header, CheckMethod, StreamFlags};
-use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
-use std::io;
-use std::io::Read;
+use byteorder::{BigEndian, LittleEndian};
+use io::ReadBytes;
+
+use alloc::vec::Vec;
+use alloc::{format, vec};
 
 #[derive(Debug)]
 struct Record {
@@ -239,11 +244,7 @@ where
             }
         } else {
             let mut newbuf: Vec<u8> = Vec::new();
-            decode_filter(
-                &mut io::BufReader::new(tmpbuf.as_slice()),
-                &mut newbuf,
-                filter,
-            )?;
+            decode_filter(&mut io::Cursor::new(tmpbuf.as_slice()), &mut newbuf, filter)?;
             // TODO: does this move or copy?
             tmpbuf = newbuf;
         }

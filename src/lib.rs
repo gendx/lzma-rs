@@ -1,21 +1,27 @@
 //! Pure-Rust codecs for LZMA, LZMA2, and XZ.
+//!
+//! Compatible with both `std` and `no_std` environments. In `no_std` mode, the
+//! library provides a minimal implementation of IO for reading from
+//! `io::Cursor<&[u8]>` and writing to `io::Cursor<&mut [u8]>`,
+//! `io::Cursor<alloc::vec::Vec<u8>>`, and `alloc::vec::Vec<u8>`.
 #![cfg_attr(docsrs, feature(doc_cfg, doc_cfg_hide))]
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 #![forbid(unsafe_code)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+extern crate alloc;
 
 #[macro_use]
 mod macros;
 
 mod decode;
 mod encode;
-
-pub mod error;
-
 mod util;
 mod xz;
 
-use std::io;
+pub mod error;
+pub mod io;
 
 /// Compression helpers.
 pub mod compress {

@@ -2,7 +2,7 @@
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Options {
     /// Defines whether the unpacked size should be written to the header.
-    /// The default is [`UnpackedSize::WriteToHeader(None)`].
+    /// The default is [`UnpackedSize::WriteToHeader`] with no specified value.
     pub unpacked_size: UnpackedSize,
 }
 

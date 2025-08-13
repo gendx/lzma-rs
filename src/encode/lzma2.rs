@@ -1,5 +1,7 @@
-use byteorder::{BigEndian, WriteBytesExt};
-use std::io;
+use crate::io;
+use alloc::vec;
+use byteorder::BigEndian;
+use io::WriteBytes;
 
 pub fn encode_stream<R, W>(input: &mut R, output: &mut W) -> io::Result<()>
 where

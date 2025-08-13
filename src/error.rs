@@ -1,7 +1,7 @@
 //! Error handling.
 
-use std::fmt::Display;
-use std::{io, result};
+use crate::io;
+use alloc::string::String;
 
 /// Library errors.
 #[derive(Debug)]
@@ -17,16 +17,16 @@ pub enum Error {
 }
 
 /// Library result alias.
-pub type Result<T> = result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;
 
 impl From<io::Error> for Error {
-    fn from(e: io::Error) -> Error {
+    fn from(e: io::Error) -> Self {
         Error::IoError(e)
     }
 }
 
-impl Display for Error {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Display for Error {
+    fn fmt(&self, fmt: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             Error::IoError(e) => write!(fmt, "io error: {}", e),
             Error::HeaderTooShort(e) => write!(fmt, "header too short: {}", e),
@@ -36,6 +36,7 @@ impl Display for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
@@ -48,17 +49,23 @@ impl std::error::Error for Error {
 #[cfg(test)]
 mod test {
     use super::Error;
+    use crate::io;
+    use alloc::string::ToString;
 
     #[test]
     fn test_display() {
+        #[cfg(feature = "std")]
         assert_eq!(
-            Error::IoError(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "this is an error"
-            ))
-            .to_string(),
+            Error::IoError(io::Error::other("this is an error")).to_string(),
             "io error: this is an error"
         );
+
+        #[cfg(not(feature = "std"))]
+        assert_eq!(
+            Error::IoError(io::Error::OutOfSpace).to_string(),
+            "io error: OutOfSpace"
+        );
+
         assert_eq!(
             Error::LzmaError("this is an error".to_string()).to_string(),
             "lzma error: this is an error"

@@ -1,4 +1,5 @@
-use std::io;
+use crate::io;
+use alloc::vec;
 
 pub fn read_tag<R: io::BufRead>(input: &mut R, tag: &[u8]) -> io::Result<bool> {
     let mut buf = vec![0; tag.len()];
@@ -55,7 +56,7 @@ where
     }
 }
 
-impl<'a, 'b, R> io::Read for CrcDigestRead<'a, 'b, R, u32>
+impl<R> io::Read for CrcDigestRead<'_, '_, R, u32>
 where
     R: io::Read,
 {
@@ -63,6 +64,29 @@ where
         let result = self.read.read(buf)?;
         self.digest.update(&buf[..result]);
         Ok(result)
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
+        self.read.read_exact(buf)?;
+        self.digest.update(buf);
+        Ok(())
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn reader_position(&self) -> io::Result<usize> {
+        self.read.reader_position()
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn advance_reader_position(&mut self, amt: usize) -> io::Result<()> {
+        self.digest.update(&self.read.get_remaining()?[..amt]);
+        self.read.advance_reader_position(amt)
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn get_remaining(&self) -> io::Result<&[u8]> {
+        self.read.get_remaining()
     }
 }
 
@@ -90,7 +114,7 @@ where
     }
 }
 
-impl<'a, R> io::Read for CountBufRead<'a, R>
+impl<R> io::Read for CountBufRead<'_, R>
 where
     R: io::BufRead,
 {
@@ -99,13 +123,38 @@ where
         self.count += result;
         Ok(result)
     }
+
+    #[cfg(not(feature = "std"))]
+    fn read_exact(&mut self, buf: &mut [u8]) -> io::Result<()> {
+        self.read.read_exact(buf)?;
+        self.count += buf.len();
+        Ok(())
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn reader_position(&self) -> io::Result<usize> {
+        self.read.reader_position()
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn advance_reader_position(&mut self, amt: usize) -> io::Result<()> {
+        self.read.advance_reader_position(amt)?;
+        self.count += amt;
+        Ok(())
+    }
+
+    #[cfg(not(feature = "std"))]
+    fn get_remaining(&self) -> io::Result<&[u8]> {
+        self.read.get_remaining()
+    }
 }
 
-impl<'a, R> io::BufRead for CountBufRead<'a, R>
+#[cfg(feature = "std")]
+impl<R> std::io::BufRead for CountBufRead<'_, R>
 where
-    R: io::BufRead,
+    R: std::io::BufRead,
 {
-    fn fill_buf(&mut self) -> io::Result<&[u8]> {
+    fn fill_buf(&mut self) -> std::io::Result<&[u8]> {
         self.read.fill_buf()
     }
 

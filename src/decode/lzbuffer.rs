@@ -1,5 +1,6 @@
-use crate::error;
-use std::io;
+use crate::{error, io};
+use alloc::format;
+use alloc::vec::Vec;
 
 pub trait LzBuffer<W>
 where
@@ -339,6 +340,11 @@ mod test {
 
         fn flush(&mut self) -> Result<(), io::Error> {
             self.flushed.append(&mut self.unflushed);
+            Ok(())
+        }
+
+        fn write_all(&mut self, buf: &[u8]) -> Result<(), io::Error> {
+            self.unflushed.extend_from_slice(buf);
             Ok(())
         }
     }

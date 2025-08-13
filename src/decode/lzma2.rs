@@ -1,10 +1,15 @@
 use crate::decode::lzbuffer::LzBuffer;
 use crate::decode::lzma::{DecoderState, LzmaProperties};
 use crate::decode::{lzbuffer, rangecoder};
-use crate::error;
-use byteorder::{BigEndian, ReadBytesExt};
-use std::io;
-use std::io::Read;
+use crate::{error, io};
+use io::ReadBytes;
+
+#[cfg(feature = "std")]
+use io::Read;
+
+use alloc::{format, vec};
+
+use byteorder::BigEndian;
 
 #[derive(Debug)]
 /// Raw decoder for LZMA2.

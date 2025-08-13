@@ -11,7 +11,7 @@ jobs:
           - stable
           - beta
           - nightly
-          - 1.71.0  # MSRV
+          - 1.78.0  # MSRV
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
@@ -22,6 +22,10 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
 
+      - name: Install liblzma-dev
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y liblzma-dev
+
       - name: Build with default features
         run: cargo build --verbose
       - name: Tests with default features
@@ -30,3 +34,7 @@ jobs:
         run: cargo build --all-features --verbose
       - name: Tests with all features
         run: cargo test --all-features --verbose
+      - name: Build with no features (i.e., `no_std`)
+        run: cargo build --no-default-features --verbose
+      - name: Test with no features (i.e., `no_std`)
+        run: cargo test --no-default-features --verbose

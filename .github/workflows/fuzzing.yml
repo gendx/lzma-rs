@@ -9,6 +9,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - name: Install cargo fuzz
-        run: cargo install cargo-fuzz --verbose
+        run: cargo +nightly install cargo-fuzz --verbose
       - name: Build fuzz targets
-        run: cargo fuzz build --verbose
+        run: cargo +nightly fuzz build --verbose

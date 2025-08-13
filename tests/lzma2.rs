@@ -11,12 +11,12 @@ fn read_all_file(filename: &str) -> std::io::Result<Vec<u8>> {
 
 fn round_trip(x: &[u8]) {
     let mut compressed: Vec<u8> = Vec::new();
-    lzma_rs::lzma2_compress(&mut std::io::BufReader::new(x), &mut compressed).unwrap();
+    lzma_rs::lzma2_compress(&mut lzma_rs::io::BufReader::new(x), &mut compressed).unwrap();
     #[cfg(feature = "enable_logging")]
     info!("Compressed {} -> {} bytes", x.len(), compressed.len());
     #[cfg(feature = "enable_logging")]
     debug!("Compressed content: {:?}", compressed);
-    let mut bf = std::io::BufReader::new(compressed.as_slice());
+    let mut bf = lzma_rs::io::BufReader::new(compressed.as_slice());
     let mut decomp: Vec<u8> = Vec::new();
     lzma_rs::lzma2_decompress(&mut bf, &mut decomp).unwrap();
     assert_eq!(decomp, x)
