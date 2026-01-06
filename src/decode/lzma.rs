@@ -182,15 +182,21 @@ pub(crate) struct DecoderState {
     rep: [usize; 4],
     len_decoder: LenDecoder,
     rep_len_decoder: LenDecoder,
+    allow_trailing_after_eos: bool,
 }
 
 impl DecoderState {
-    pub fn new(lzma_props: LzmaProperties, unpacked_size: Option<u64>) -> Self {
+    pub fn new(
+        lzma_props: LzmaProperties,
+        unpacked_size: Option<u64>,
+        allow_trailing_after_eos: bool,
+    ) -> Self {
         lzma_props.validate();
         DecoderState {
             partial_input_buf: std::io::Cursor::new([0; MAX_REQUIRED_INPUT]),
             lzma_props,
             unpacked_size,
+            allow_trailing_after_eos,
             literal_probs: Vec2D::init(0x400, (1 << (lzma_props.lc + lzma_props.lp), 0x300)),
             pos_slot_decoder: [
                 BitTree::new(),
@@ -372,7 +378,7 @@ impl DecoderState {
             if update {
                 self.rep[0] = rep_0;
                 if self.rep[0] == 0xFFFF_FFFF {
-                    if rangecoder.is_finished_ok()? {
+                    if self.allow_trailing_after_eos || rangecoder.is_finished_ok()? {
                         return Ok(ProcessingStatus::Finished);
                     }
                     return Err(error::Error::LzmaError(String::from(
@@ -604,11 +610,19 @@ impl LzmaDecoder {
     /// Creates a new object ready for decompressing data that it's given for
     /// the input dict size, expected unpacked data size, and memory limit
     /// for the internal buffer.
-    pub fn new(params: LzmaParams, memlimit: Option<usize>) -> error::Result<LzmaDecoder> {
+    pub fn new(
+        params: LzmaParams,
+        memlimit: Option<usize>,
+        allow_trailing_after_eos: bool,
+    ) -> error::Result<LzmaDecoder> {
         Ok(Self {
             params,
             memlimit: memlimit.unwrap_or(usize::MAX),
-            state: DecoderState::new(params.properties, params.unpacked_size),
+            state: DecoderState::new(
+                params.properties,
+                params.unpacked_size,
+                allow_trailing_after_eos,
+            ),
         })
     }
 

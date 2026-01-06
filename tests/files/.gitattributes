@@ -1,0 +1,7 @@
+# Test fixture files must preserve Unix line endings (LF)
+# These are compared byte-for-byte against decompressed output
+# from the corresponding .lzma/.xz files
+
+*.txt text eol=lf
+good-1-lzma2-* text eol=lf
+range-coder-edge-case text eol=lf

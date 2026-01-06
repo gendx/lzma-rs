@@ -29,6 +29,7 @@ impl Lzma2Decoder {
                     pb: 0,
                 },
                 None,
+                false,
             ),
         }
     }

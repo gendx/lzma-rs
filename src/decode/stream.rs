@@ -161,7 +161,11 @@ where
     ) -> crate::error::Result<State<W>> {
         match LzmaParams::read_header(&mut input, options) {
             Ok(params) => {
-                let decoder = DecoderState::new(params.properties, params.unpacked_size);
+                let decoder = DecoderState::new(
+                    params.properties,
+                    params.unpacked_size,
+                    options.allow_trailing_after_eos,
+                );
                 let output = LzCircularBuffer::from_stream(
                     output,
                     params.dict_size as usize,

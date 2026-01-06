@@ -17,6 +17,14 @@ pub struct Options {
     ///
     /// The default is false (always do completion check).
     pub allow_incomplete: bool,
+    /// Allow trailing bytes after EOS marker without error.
+    ///
+    /// Some formats like NSIS archives have padding or other data after the
+    /// LZMA compressed stream. When this is true, the decoder will not error
+    /// if there are remaining bytes after the end-of-stream marker.
+    ///
+    /// The default is false (strict validation - error if bytes remain).
+    pub allow_trailing_after_eos: bool,
 }
 
 /// Alternatives for defining the unpacked size of the decoded data.
@@ -53,6 +61,7 @@ mod test {
                 unpacked_size: UnpackedSize::ReadFromHeader,
                 memlimit: None,
                 allow_incomplete: false,
+                allow_trailing_after_eos: false,
             },
             Options::default()
         );

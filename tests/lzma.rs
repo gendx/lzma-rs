@@ -354,3 +354,95 @@ fn memlimit() {
         );
     }
 }
+
+#[test]
+fn allow_trailing_after_eos() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+
+    let original = b"Hello, LZMA world! This is a test of trailing bytes handling.";
+
+    // Compress with unknown size (will include EOS marker)
+    let mut compressed = Vec::new();
+    let encode_options = lzma_rs::compress::Options {
+        unpacked_size: lzma_rs::compress::UnpackedSize::WriteToHeader(None),
+    };
+    lzma_rs::lzma_compress_with_options(
+        &mut std::io::BufReader::new(&original[..]),
+        &mut compressed,
+        &encode_options,
+    )
+    .unwrap();
+
+    // Append trailing garbage bytes (simulating NSIS padding)
+    let mut compressed_with_trailing = compressed.clone();
+    compressed_with_trailing.extend_from_slice(b"\x00\x00\x00\x00GARBAGE");
+
+    // Test 1: Default behavior should fail with trailing bytes
+    {
+        let decode_options = lzma_rs::decompress::Options {
+            unpacked_size: lzma_rs::decompress::UnpackedSize::ReadFromHeader,
+            allow_trailing_after_eos: false,
+            ..Default::default()
+        };
+        let mut output = Vec::new();
+        let result = lzma_rs::lzma_decompress_with_options(
+            &mut std::io::BufReader::new(compressed_with_trailing.as_slice()),
+            &mut output,
+            &decode_options,
+        );
+        assert!(
+            result.is_err(),
+            "Should fail with trailing bytes when allow_trailing_after_eos is false"
+        );
+        let err_msg = result.unwrap_err().to_string();
+        assert!(
+            err_msg.contains("end-of-stream"),
+            "Error should mention end-of-stream: {}",
+            err_msg
+        );
+    }
+
+    // Test 2: With allow_trailing_after_eos: true, should succeed
+    {
+        let decode_options = lzma_rs::decompress::Options {
+            unpacked_size: lzma_rs::decompress::UnpackedSize::ReadFromHeader,
+            allow_trailing_after_eos: true,
+            ..Default::default()
+        };
+        let mut output = Vec::new();
+        let result = lzma_rs::lzma_decompress_with_options(
+            &mut std::io::BufReader::new(compressed_with_trailing.as_slice()),
+            &mut output,
+            &decode_options,
+        );
+        assert!(
+            result.is_ok(),
+            "Should succeed with allow_trailing_after_eos: true, got: {:?}",
+            result
+        );
+        assert_eq!(output, original, "Decompressed data should match original");
+    }
+
+    // Test 3: Without trailing bytes, both should work
+    {
+        let decode_options = lzma_rs::decompress::Options::default();
+        let mut output = Vec::new();
+        let result = lzma_rs::lzma_decompress_with_options(
+            &mut std::io::BufReader::new(compressed.as_slice()),
+            &mut output,
+            &decode_options,
+        );
+        assert!(result.is_ok(), "Should succeed without trailing bytes");
+        assert_eq!(output, original);
+    }
+}
+
+#[test]
+fn allow_trailing_after_eos_default() {
+    let options = lzma_rs::decompress::Options::default();
+    assert_eq!(
+        options.allow_trailing_after_eos, false,
+        "allow_trailing_after_eos should default to false for backwards compatibility"
+    );
+}

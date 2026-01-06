@@ -55,7 +55,8 @@ pub fn lzma_decompress_with_options<R: io::BufRead, W: io::Write>(
     options: &decompress::Options,
 ) -> error::Result<()> {
     let params = decode::lzma::LzmaParams::read_header(input, options)?;
-    let mut decoder = decode::lzma::LzmaDecoder::new(params, options.memlimit)?;
+    let mut decoder =
+        decode::lzma::LzmaDecoder::new(params, options.memlimit, options.allow_trailing_after_eos)?;
     decoder.decompress(input, output)
 }
 
