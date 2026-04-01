@@ -10,17 +10,18 @@ use std::io::Read;
 /// Raw decoder for LZMA2.
 pub struct Lzma2Decoder {
     lzma_state: DecoderState,
+    dict_size: u32,
 }
 
 impl Default for Lzma2Decoder {
     fn default() -> Self {
-        Self::new()
+        Self::new(8 * 1024 * 1024) // 8 MiB default dict size, same as xz
     }
 }
 
 impl Lzma2Decoder {
     /// Creates a new object ready for decompressing data that it's given.
-    pub fn new() -> Lzma2Decoder {
+    pub fn new(dict_size: u32) -> Lzma2Decoder {
         Lzma2Decoder {
             lzma_state: DecoderState::new(
                 LzmaProperties {
@@ -30,14 +31,10 @@ impl Lzma2Decoder {
                 },
                 None,
             ),
+            dict_size,
         }
     }
 
-    /// Performs the equivalent of replacing this decompression state with a
-    /// freshly allocated copy.
-    ///
-    /// This function may not allocate memory and will attempt to reuse any
-    /// previously allocated resources.
     #[cfg(feature = "raw_decoder")]
     pub fn reset(&mut self) {
         self.lzma_state.reset_state(LzmaProperties {
@@ -47,14 +44,16 @@ impl Lzma2Decoder {
         });
     }
 
-    /// Decompresses the input data into the output, consuming only as much
-    /// input as needed and writing as much output as possible.
     pub fn decompress<W: io::Write, R: io::BufRead>(
         &mut self,
         input: &mut R,
         output: &mut W,
     ) -> error::Result<()> {
-        let mut accum = lzbuffer::LzAccumBuffer::from_stream(output, usize::MAX);
+        let mut accum = lzbuffer::LzCircularBuffer::from_stream(
+            output,
+            self.dict_size as usize,
+            self.dict_size as usize,
+        );
 
         loop {
             let status = input.read_u8().map_err(|e| {
@@ -67,10 +66,8 @@ impl Lzma2Decoder {
                 lzma_info!("LZMA2 end of input");
                 break;
             } else if status == 1 {
-                // uncompressed reset dict
                 Self::parse_uncompressed(&mut accum, input, true)?;
             } else if status == 2 {
-                // uncompressed no reset
                 Self::parse_uncompressed(&mut accum, input, false)?;
             } else {
                 self.parse_lzma(&mut accum, input, status)?;
@@ -83,7 +80,7 @@ impl Lzma2Decoder {
 
     fn parse_lzma<R, W>(
         &mut self,
-        accum: &mut lzbuffer::LzAccumBuffer<W>,
+        accum: &mut impl LzBuffer<W>,
         input: &mut R,
         status: u8,
     ) -> error::Result<()>
@@ -192,8 +189,8 @@ impl Lzma2Decoder {
         self.lzma_state.process(accum, &mut rangecoder)
     }
 
-    fn parse_uncompressed<R, W>(
-        accum: &mut lzbuffer::LzAccumBuffer<W>,
+    fn parse_uncompressed<R, W: std::io::Write>(
+        accum: &mut impl LzBuffer<W>,
         input: &mut R,
         reset_dict: bool,
     ) -> error::Result<()>
@@ -206,14 +203,8 @@ impl Lzma2Decoder {
             .map_err(|e| error::Error::LzmaError(format!("LZMA2 expected unpacked size: {}", e)))?;
         let unpacked_size = (unpacked_size as usize) + 1;
 
-        lzma_info!(
-            "LZMA2 uncompressed block {{ unpacked_size: {}, reset_dict: {} }}",
-            unpacked_size,
-            reset_dict
-        );
-
         if reset_dict {
-            accum.reset()?;
+            accum.reset()?; // Now uses trait method
         }
 
         let mut buf = vec![0; unpacked_size];
@@ -223,7 +214,7 @@ impl Lzma2Decoder {
                 unpacked_size, e
             ))
         })?;
-        accum.append_bytes(buf.as_slice());
+        accum.append_bytes(buf.as_slice())?; // <--- ADDED `?` because trait returns Result
 
         Ok(())
     }

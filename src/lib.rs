@@ -84,7 +84,7 @@ pub fn lzma2_decompress<R: io::BufRead, W: io::Write>(
     input: &mut R,
     output: &mut W,
 ) -> error::Result<()> {
-    decode::lzma2::Lzma2Decoder::new().decompress(input, output)
+    decode::lzma2::Lzma2Decoder::new(8 * 1024 * 1024).decompress(input, output)
 }
 
 /// Compress data with LZMA2 and default

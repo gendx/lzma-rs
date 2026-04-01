@@ -8,8 +8,7 @@ use crate::xz::{footer, header, CheckMethod, StreamFlags};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
 use crc::Digest;
 use std::io;
-use std::io::Write;
-use std::io::Read;
+use std::io::{Read, Write};
 
 #[derive(Debug)]
 struct Record {
@@ -18,7 +17,8 @@ struct Record {
 }
 
 /// A writer wrapper that calculates the checksum of all data written.
-/// This allows us to validate the block check while streaming data to the output.
+/// This allows us to validate the block check while streaming data to the
+/// output.
 enum Checksummer {
     None,
     Crc32(Digest<'static, u32>),
@@ -37,9 +37,7 @@ impl<W: io::Write> CrcWriter<W> {
             CheckMethod::None => Checksummer::None,
             CheckMethod::Crc32 => Checksummer::Crc32(CRC32.digest()),
             CheckMethod::Crc64 => Checksummer::Crc64(CRC64.digest()),
-            CheckMethod::Sha256 => {
-                Checksummer::None 
-            }
+            CheckMethod::Sha256 => Checksummer::None,
         };
         Self {
             inner,
@@ -290,19 +288,19 @@ where
     // Optimization: Stream directly to output if there is only one filter and
     // the check method is supported by the streaming verifier.
     // This avoids buffering the whole block in memory.
-    let single_filter_stream = block_header.filters.len() == 1 
-        && check_method != CheckMethod::Sha256; // SHA256 requires buffering or external lib;
+    let single_filter_stream =
+        block_header.filters.len() == 1 && check_method != CheckMethod::Sha256; // SHA256 requires buffering or external lib;
 
     if single_filter_stream {
         let filter = &block_header.filters[0];
         let mut crc_writer = CrcWriter::new(output, check_method);
-        
+
         let packed_size = decode_filter(count_input, &mut crc_writer, filter)?;
         crc_writer.flush()?;
-        
+
         let unpacked_size = crc_writer.count();
         let calculated_check = crc_writer.finalize()?;
-        
+
         // Validate packed size
         if let Some(expected_packed_size) = block_header.packed_size {
             if (packed_size as u64) != expected_packed_size {
@@ -512,8 +510,26 @@ where
                     filter.filter_id
                 )));
             }
-            // TODO: properties??
-            Lzma2Decoder::new().decompress(&mut count_input, output)?;
+
+            let prop = filter.props[0];
+            if prop > 40 {
+                return Err(error::Error::XzError(format!(
+                    "Invalid LZMA2 dictionary size property: {}",
+                    prop
+                )));
+            }
+
+            // Parse LZMA2 dictionary size based on XZ specification
+            let dict_size = if prop == 40 {
+                u32::MAX
+            } else {
+                (2 | (prop as u32 & 1)) << (prop as u32 / 2 + 11)
+            };
+
+            lzma_info!("LZMA2 using dictionary size: {}", dict_size);
+
+            // Pass the parsed dict_size to the decoder!
+            Lzma2Decoder::new(dict_size).decompress(&mut count_input, output)?;
             Ok(count_input.count())
         }
     }

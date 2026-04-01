@@ -35,9 +35,12 @@ struct WriteCounter {
 
 impl WriteCounter {
     fn new() -> Self {
-        Self { count: 0, inner: Vec::new() }
+        Self {
+            count: 0,
+            inner: Vec::new(),
+        }
     }
-    
+
     fn write_count(&self) -> usize {
         self.count
     }
@@ -174,17 +177,29 @@ fn test_xz_block_check_crc32_invalid() {
 }
 
 #[test]
-fn test_streaming_decompression_behavior() {
+fn test_true_streaming_decompression() {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
 
-    // This file contains 8192 bytes of zeros, compressed with a 4KB LZMA2 dictionary.
+    // This file contains 16384 bytes of zeros, compressed with a 4096 byte dictionary.
     let mut f = BufReader::new(std::fs::File::open("tests/files/streaming_test.xz").unwrap());
-    let mut decomp: Vec<u8> = Vec::new();
+    let mut writer = WriteCounter::new();
     
-    lzma_rs::xz_decompress(&mut f, &mut decomp).unwrap();
+    lzma_rs::xz_decompress(&mut f, &mut writer).unwrap();
     
-    // Verify the data decompressed correctly through the new streaming path
-    assert_eq!(decomp.len(), 8192);
-    assert!(decomp.iter().all(|&b| b == 0));
+    // Verify the data decompressed correctly
+    assert_eq!(writer.inner.len(), 16384);
+    assert!(writer.inner.iter().all(|&b| b == 0));
+    
+    // PROOF OF STREAMING:
+    // Because we use LzCircularBuffer now, it flushes to the `Write` trait 
+    // every time the 4096-byte dictionary fills up.
+    // 16384 bytes / 4096 dict size = exactly 4 flushes.
+    // 
+    // If it was still using LzAccumBuffer (the old way), it would buffer 
+    // the whole 16KB internally and call `write()` exactly once at the end.
+    assert_eq!(
+        writer.write_count(), 4, 
+        "Expected exactly 4 write calls (one per 4KB dictionary flush) to verify true O(1) streaming"
+    );
 }
