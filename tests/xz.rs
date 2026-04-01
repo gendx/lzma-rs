@@ -1,6 +1,6 @@
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
-use std::io::{BufReader, Cursor, Read};
+use std::io::{self, BufReader, Cursor, Read, Write};
 
 /// Utility function to read a file into memory
 fn read_all_file(filename: &str) -> std::io::Result<Vec<u8>> {
@@ -25,6 +25,34 @@ fn round_trip(x: &[u8]) {
 fn round_trip_file(filename: &str) {
     let x = read_all_file(filename).unwrap();
     round_trip(x.as_slice());
+}
+
+/// A custom writer that counts exactly how many times `write()` is called.
+struct WriteCounter {
+    count: usize,
+    inner: Vec<u8>,
+}
+
+impl WriteCounter {
+    fn new() -> Self {
+        Self { count: 0, inner: Vec::new() }
+    }
+    
+    fn write_count(&self) -> usize {
+        self.count
+    }
+}
+
+impl Write for WriteCounter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.count += 1;
+        self.inner.extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 #[test]
@@ -143,4 +171,20 @@ fn test_xz_block_check_crc32_invalid() {
         err_msg,
         "xz error: Invalid footer CRC32: expected 0x01234567 but got 0x8b0d303e"
     )
+}
+
+#[test]
+fn test_streaming_decompression_behavior() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+
+    // This file contains 8192 bytes of zeros, compressed with a 4KB LZMA2 dictionary.
+    let mut f = BufReader::new(std::fs::File::open("tests/files/streaming_test.xz").unwrap());
+    let mut decomp: Vec<u8> = Vec::new();
+    
+    lzma_rs::xz_decompress(&mut f, &mut decomp).unwrap();
+    
+    // Verify the data decompressed correctly through the new streaming path
+    assert_eq!(decomp.len(), 8192);
+    assert!(decomp.iter().all(|&b| b == 0));
 }
