@@ -1,6 +1,6 @@
 #[cfg(feature = "enable_logging")]
 use log::{debug, info};
-use std::io::{BufReader, Cursor, Read};
+use std::io::{self, BufReader, Cursor, Read, Write};
 
 /// Utility function to read a file into memory
 fn read_all_file(filename: &str) -> std::io::Result<Vec<u8>> {
@@ -25,6 +25,37 @@ fn round_trip(x: &[u8]) {
 fn round_trip_file(filename: &str) {
     let x = read_all_file(filename).unwrap();
     round_trip(x.as_slice());
+}
+
+/// A custom writer that counts exactly how many times `write()` is called.
+struct WriteCounter {
+    count: usize,
+    inner: Vec<u8>,
+}
+
+impl WriteCounter {
+    fn new() -> Self {
+        Self {
+            count: 0,
+            inner: Vec::new(),
+        }
+    }
+
+    fn write_count(&self) -> usize {
+        self.count
+    }
+}
+
+impl Write for WriteCounter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.count += 1;
+        self.inner.extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 #[test]
@@ -143,4 +174,32 @@ fn test_xz_block_check_crc32_invalid() {
         err_msg,
         "xz error: Invalid footer CRC32: expected 0x01234567 but got 0x8b0d303e"
     )
+}
+
+#[test]
+fn test_true_streaming_decompression() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+
+    // This file contains 16384 bytes of zeros, compressed with a 4096 byte dictionary.
+    let mut f = BufReader::new(std::fs::File::open("tests/files/streaming_test.xz").unwrap());
+    let mut writer = WriteCounter::new();
+    
+    lzma_rs::xz_decompress(&mut f, &mut writer).unwrap();
+    
+    // Verify the data decompressed correctly
+    assert_eq!(writer.inner.len(), 16384);
+    assert!(writer.inner.iter().all(|&b| b == 0));
+    
+    // PROOF OF STREAMING:
+    // Because we use LzCircularBuffer now, it flushes to the `Write` trait 
+    // every time the 4096-byte dictionary fills up.
+    // 16384 bytes / 4096 dict size = exactly 4 flushes.
+    // 
+    // If it was still using LzAccumBuffer (the old way), it would buffer 
+    // the whole 16KB internally and call `write()` exactly once at the end.
+    assert_eq!(
+        writer.write_count(), 4, 
+        "Expected exactly 4 write calls (one per 4KB dictionary flush) to verify true O(1) streaming"
+    );
 }

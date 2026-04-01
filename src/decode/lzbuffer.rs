@@ -19,6 +19,11 @@ where
     /// Fetch an LZ sequence (length, distance) from inside the buffer.
     fn append_lz(&mut self, len: usize, dist: usize) -> error::Result<()>;
 
+    /// Append multiple bytes.
+    fn append_bytes(&mut self, buf: &[u8]) -> error::Result<()>;
+    /// Reset the internal dictionary state.
+    fn reset(&mut self) -> io::Result<()>;
+
     /// Get a reference to the output sink.
     #[cfg(feature = "stream")]
     fn get_output(&self) -> &W;
@@ -139,6 +144,19 @@ where
             offset += 1;
         }
         self.len += len;
+        Ok(())
+    }
+
+    fn append_bytes(&mut self, buf: &[u8]) -> error::Result<()> {
+        self.buf.extend_from_slice(buf);
+        self.len += buf.len();
+        Ok(())
+    }
+
+    fn reset(&mut self) -> io::Result<()> {
+        self.stream.write_all(self.buf.as_slice())?;
+        self.buf.clear();
+        self.len = 0;
         Ok(())
     }
 
@@ -293,6 +311,22 @@ where
                 offset = 0
             }
         }
+        Ok(())
+    }
+
+    fn append_bytes(&mut self, buf: &[u8]) -> error::Result<()> {
+        for &b in buf {
+            self.append_literal(b)?;
+        }
+        Ok(())
+    }
+
+    fn reset(&mut self) -> io::Result<()> {
+        if self.cursor > 0 {
+            self.stream.write_all(&self.buf[0..self.cursor])?;
+            self.cursor = 0;
+        }
+        self.len = 0;
         Ok(())
     }
 

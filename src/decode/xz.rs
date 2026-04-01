@@ -6,13 +6,76 @@ use crate::error;
 use crate::xz::crc::{CRC32, CRC64};
 use crate::xz::{footer, header, CheckMethod, StreamFlags};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use crc::Digest;
 use std::io;
-use std::io::Read;
+use std::io::{Read, Write};
 
 #[derive(Debug)]
 struct Record {
     unpadded_size: u64,
     unpacked_size: u64,
+}
+
+/// A writer wrapper that calculates the checksum of all data written.
+/// This allows us to validate the block check while streaming data to the
+/// output.
+enum Checksummer {
+    None,
+    Crc32(Digest<'static, u32>),
+    Crc64(Digest<'static, u64>),
+}
+
+pub(crate) struct CrcWriter<W: io::Write> {
+    inner: W,
+    checksummer: Checksummer,
+    byte_count: u64,
+}
+
+impl<W: io::Write> CrcWriter<W> {
+    pub fn new(inner: W, check_method: CheckMethod) -> Self {
+        let checksummer = match check_method {
+            CheckMethod::None => Checksummer::None,
+            CheckMethod::Crc32 => Checksummer::Crc32(CRC32.digest()),
+            CheckMethod::Crc64 => Checksummer::Crc64(CRC64.digest()),
+            CheckMethod::Sha256 => Checksummer::None,
+        };
+        Self {
+            inner,
+            checksummer,
+            byte_count: 0,
+        }
+    }
+
+    pub fn count(&self) -> u64 {
+        self.byte_count
+    }
+
+    /// Finalizes the checksum and returns the calculated value.
+    /// Consumes the writer to ensure no further writing occurs.
+    pub fn finalize(self) -> error::Result<u64> {
+        match self.checksummer {
+            Checksummer::None => Ok(0),
+            Checksummer::Crc32(d) => Ok(d.finalize() as u64),
+            Checksummer::Crc64(d) => Ok(d.finalize()),
+        }
+    }
+}
+
+impl<W: io::Write> io::Write for CrcWriter<W> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let count = self.inner.write(buf)?;
+        self.byte_count += count as u64;
+        match &mut self.checksummer {
+            Checksummer::None => {}
+            Checksummer::Crc32(d) => d.update(&buf[..count]),
+            Checksummer::Crc64(d) => d.update(&buf[..count]),
+        }
+        Ok(count)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.inner.flush()
+    }
 }
 
 pub fn decode_stream<R, W>(input: &mut R, output: &mut W) -> error::Result<()>
@@ -222,71 +285,172 @@ where
             crc32, digest_crc32
         )));
     }
+    // Optimization: Stream directly to output if there is only one filter and
+    // the check method is supported by the streaming verifier.
+    // This avoids buffering the whole block in memory.
+    let single_filter_stream =
+        block_header.filters.len() == 1 && check_method != CheckMethod::Sha256; // SHA256 requires buffering or external lib;
 
-    let mut tmpbuf: Vec<u8> = Vec::new();
-    let filters = block_header.filters;
-    for (i, filter) in filters.iter().enumerate() {
-        if i == 0 {
-            // TODO: use SubBufRead on input if packed_size is known?
-            let packed_size = decode_filter(count_input, &mut tmpbuf, filter)?;
-            if let Some(expected_packed_size) = block_header.packed_size {
-                if (packed_size as u64) != expected_packed_size {
-                    return Err(error::Error::XzError(format!(
-                        "Invalid compressed size: expected {} but got {}",
-                        expected_packed_size, packed_size
-                    )));
-                }
+    if single_filter_stream {
+        let filter = &block_header.filters[0];
+        let mut crc_writer = CrcWriter::new(output, check_method);
+
+        let packed_size = decode_filter(count_input, &mut crc_writer, filter)?;
+        crc_writer.flush()?;
+
+        let unpacked_size = crc_writer.count();
+        let calculated_check = crc_writer.finalize()?;
+
+        // Validate packed size
+        if let Some(expected_packed_size) = block_header.packed_size {
+            if (packed_size as u64) != expected_packed_size {
+                return Err(error::Error::XzError(format!(
+                    "Invalid compressed size: expected {} but got {}",
+                    expected_packed_size, packed_size
+                )));
             }
-        } else {
-            let mut newbuf: Vec<u8> = Vec::new();
-            decode_filter(
-                &mut io::BufReader::new(tmpbuf.as_slice()),
-                &mut newbuf,
-                filter,
-            )?;
-            // TODO: does this move or copy?
-            tmpbuf = newbuf;
         }
-    }
 
-    let unpacked_size = tmpbuf.len();
-    lzma_info!("XZ block decompressed to {} byte(s)", tmpbuf.len());
-
-    if let Some(expected_unpacked_size) = block_header.unpacked_size {
-        if (unpacked_size as u64) != expected_unpacked_size {
-            return Err(error::Error::XzError(format!(
-                "Invalid decompressed size: expected {} but got {}",
-                expected_unpacked_size, unpacked_size
-            )));
+        // Validate unpacked size
+        if let Some(expected_unpacked_size) = block_header.unpacked_size {
+            if unpacked_size != expected_unpacked_size {
+                return Err(error::Error::XzError(format!(
+                    "Invalid decompressed size: expected {} but got {}",
+                    expected_unpacked_size, unpacked_size
+                )));
+            }
         }
-    }
 
-    let count = count_input.count();
-    let padding_size = ((count ^ 0x03) + 1) & 0x03;
-    lzma_info!(
-        "XZ block: {} byte(s) read, {} byte(s) of padding, check method {:?}",
-        count,
-        padding_size,
-        check_method
-    );
-    for _ in 0..padding_size {
-        let byte = count_input.read_u8()?;
-        if byte != 0 {
-            return Err(error::Error::XzError(
-                "Invalid block padding, must be null bytes".to_string(),
-            ));
+        // Handle Padding
+        let count = count_input.count();
+        let padding_size = ((count ^ 0x03) + 1) & 0x03;
+        lzma_info!(
+            "XZ block: {} byte(s) read, {} byte(s) of padding, check method {:?}",
+            count,
+            padding_size,
+            check_method
+        );
+        for _ in 0..padding_size {
+            let byte = count_input.read_u8()?;
+            if byte != 0 {
+                return Err(error::Error::XzError(
+                    "Invalid block padding, must be null bytes".to_string(),
+                ));
+            }
         }
-    }
-    validate_block_check(count_input, tmpbuf.as_slice(), check_method)?;
 
-    output.write_all(tmpbuf.as_slice())?;
-    records.push(Record {
-        unpadded_size: (count_input.count() - padding_size) as u64,
-        unpacked_size: unpacked_size as u64,
-    });
+        // Verify Block Check
+        verify_streaming_check(count_input, calculated_check, check_method)?;
+
+        records.push(Record {
+            unpadded_size: (count_input.count() - padding_size) as u64,
+            unpacked_size: unpacked_size,
+        });
+    } else {
+        // Fallback: Buffer in memory for multiple filters or unsupported checks
+        let mut tmpbuf: Vec<u8> = Vec::new();
+        let filters = block_header.filters;
+        for (i, filter) in filters.iter().enumerate() {
+            if i == 0 {
+                let packed_size = decode_filter(count_input, &mut tmpbuf, filter)?;
+                if let Some(expected_packed_size) = block_header.packed_size {
+                    if (packed_size as u64) != expected_packed_size {
+                        return Err(error::Error::XzError(format!(
+                            "Invalid compressed size: expected {} but got {}",
+                            expected_packed_size, packed_size
+                        )));
+                    }
+                }
+            } else {
+                let mut newbuf: Vec<u8> = Vec::new();
+                decode_filter(
+                    &mut io::BufReader::new(tmpbuf.as_slice()),
+                    &mut newbuf,
+                    filter,
+                )?;
+                tmpbuf = newbuf;
+            }
+        }
+
+        let unpacked_size = tmpbuf.len();
+        lzma_info!("XZ block decompressed to {} byte(s)", tmpbuf.len());
+
+        if let Some(expected_unpacked_size) = block_header.unpacked_size {
+            if (unpacked_size as u64) != expected_unpacked_size {
+                return Err(error::Error::XzError(format!(
+                    "Invalid decompressed size: expected {} but got {}",
+                    expected_unpacked_size, unpacked_size
+                )));
+            }
+        }
+
+        let count = count_input.count();
+        let padding_size = ((count ^ 0x03) + 1) & 0x03;
+        lzma_info!(
+            "XZ block: {} byte(s) read, {} byte(s) of padding, check method {:?}",
+            count,
+            padding_size,
+            check_method
+        );
+        for _ in 0..padding_size {
+            let byte = count_input.read_u8()?;
+            if byte != 0 {
+                return Err(error::Error::XzError(
+                    "Invalid block padding, must be null bytes".to_string(),
+                ));
+            }
+        }
+        validate_block_check(count_input, tmpbuf.as_slice(), check_method)?;
+
+        output.write_all(tmpbuf.as_slice())?;
+        records.push(Record {
+            unpadded_size: (count_input.count() - padding_size) as u64,
+            unpacked_size: unpacked_size as u64,
+        });
+    }
 
     let finished = false;
     Ok(finished)
+}
+
+/// Verify block checksum for streaming context.
+fn verify_streaming_check<R>(
+    input: &mut R,
+    calculated_digest: u64,
+    check_method: CheckMethod,
+) -> error::Result<()>
+where
+    R: io::BufRead,
+{
+    match check_method {
+        CheckMethod::None => Ok(()),
+        CheckMethod::Crc32 => {
+            let crc32 = input.read_u32::<LittleEndian>()?;
+            if crc32 != calculated_digest as u32 {
+                return Err(error::Error::XzError(format!(
+                    "Invalid block CRC32, expected 0x{:08x} but got 0x{:08x}",
+                    crc32, calculated_digest
+                )));
+            }
+            Ok(())
+        }
+        CheckMethod::Crc64 => {
+            let crc64 = input.read_u64::<LittleEndian>()?;
+            if crc64 != calculated_digest {
+                return Err(error::Error::XzError(format!(
+                    "Invalid block CRC64, expected 0x{:016x} but got 0x{:016x}",
+                    crc64, calculated_digest
+                )));
+            }
+            Ok(())
+        }
+        CheckMethod::Sha256 => {
+            // Should not reach here due to check in read_block, but handle defensively
+            Err(error::Error::XzError(
+                "SHA-256 checksum validation not supported in streaming mode".to_string(),
+            ))
+        }
+    }
 }
 
 /// Verify block checksum against the "Block Check" field.
@@ -346,8 +510,26 @@ where
                     filter.filter_id
                 )));
             }
-            // TODO: properties??
-            Lzma2Decoder::new().decompress(&mut count_input, output)?;
+
+            let prop = filter.props[0];
+            if prop > 40 {
+                return Err(error::Error::XzError(format!(
+                    "Invalid LZMA2 dictionary size property: {}",
+                    prop
+                )));
+            }
+
+            // Parse LZMA2 dictionary size based on XZ specification
+            let dict_size = if prop == 40 {
+                u32::MAX
+            } else {
+                (2 | (prop as u32 & 1)) << (prop as u32 / 2 + 11)
+            };
+
+            lzma_info!("LZMA2 using dictionary size: {}", dict_size);
+
+            // Pass the parsed dict_size to the decoder!
+            Lzma2Decoder::new(dict_size).decompress(&mut count_input, output)?;
             Ok(count_input.count())
         }
     }
