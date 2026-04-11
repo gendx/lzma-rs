@@ -61,27 +61,35 @@ where
         Ok(encoder)
     }
 
-    pub fn process<R>(mut self, input: R) -> io::Result<()>
+    pub fn process<R>(mut self, mut input: R) -> io::Result<()>
     where
         R: io::Read,
     {
         let mut prev_byte = 0u8;
-        let mut input_len = 0;
+        let mut out_len: usize = 0;
+        let mut read_buf = [0u8; 256];
 
-        for (out_len, byte_result) in input.bytes().enumerate() {
-            let byte = byte_result?;
-            let pos_state = out_len & 3;
-            input_len = out_len;
+        // Read input in chunks to avoid per-byte read() overhead.
+        loop {
+            let n = input.read(&mut read_buf)?;
+            if n == 0 {
+                break; // EOF
+            }
 
-            // Literal
-            self.rangecoder
-                .encode_bit(&mut self.is_match[pos_state], false)?;
+            for &byte in &read_buf[..n] {
+                let pos_state = out_len & 3;
 
-            self.encode_literal(byte, prev_byte)?;
-            prev_byte = byte;
+                // Literal
+                self.rangecoder
+                    .encode_bit(&mut self.is_match[pos_state], false)?;
+
+                self.encode_literal(byte, prev_byte)?;
+                prev_byte = byte;
+                out_len += 1;
+            }
         }
 
-        self.finish(input_len + 1)
+        self.finish(out_len)
     }
 
     fn finish(&mut self, input_len: usize) -> io::Result<()> {
