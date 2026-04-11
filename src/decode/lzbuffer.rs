@@ -132,11 +132,22 @@ where
             )));
         }
 
-        let mut offset = buf_len - dist;
-        for _ in 0..len {
-            let x = self.buf[offset];
-            self.buf.push(x);
-            offset += 1;
+        self.buf.reserve(len);
+
+        let start = buf_len - dist;
+        if dist >= len {
+            self.buf.extend_from_within(start..start + len);
+        } else {
+            // dist < len: the source overlaps what we're writing, so the
+            // pattern at [start..start+dist] repeats to fill `len` bytes.
+            self.buf.extend_from_within(start..start + dist);
+            let mut copied = dist;
+            while copied < len {
+                let n = dist.min(len - copied);
+                let src_start = self.buf.len() - dist;
+                self.buf.extend_from_within(src_start..src_start + n);
+                copied += n;
+            }
         }
         self.len += len;
         Ok(())
@@ -256,7 +267,12 @@ where
     }
 
     fn append_literal(&mut self, lit: u8) -> error::Result<()> {
-        self.set(self.cursor, lit)?;
+        // Skip the bounds check in set() when the buffer is already full-sized.
+        if self.cursor < self.buf.len() {
+            self.buf[self.cursor] = lit;
+        } else {
+            self.set(self.cursor, lit)?;
+        }
         self.cursor += 1;
         self.len += 1;
 
@@ -284,15 +300,64 @@ where
             )));
         }
 
-        let mut offset = (self.dict_size + self.cursor - dist) % self.dict_size;
-        for _ in 0..len {
-            let x = self.get(offset);
-            self.append_literal(x)?;
-            offset += 1;
-            if offset == self.dict_size {
-                offset = 0
+        // Grow the buffer enough for this copy, but not beyond dict_size
+        // (avoids allocating a huge dict upfront for streams that never fill it).
+        let needed = self.dict_size.min(self.cursor + len);
+        if self.buf.len() < needed {
+            if needed > self.memlimit {
+                return Err(error::Error::LzmaError(format!(
+                    "exceeded memory limit of {}",
+                    self.memlimit
+                )));
+            }
+            self.buf.resize(needed, 0);
+        }
+
+        let mut src = (self.dict_size + self.cursor - dist) % self.dict_size;
+        let mut remaining = len;
+
+        while remaining > 0 {
+            // Max contiguous bytes before src or cursor wrap around the ring.
+            let src_contig = self.dict_size - src;
+            let dst_contig = self.dict_size - self.cursor;
+            let src_avail = self.buf.len().saturating_sub(src);
+            let chunk = remaining.min(src_contig).min(dst_contig).min(src_avail);
+
+            if chunk == 0 {
+                // src is past the allocated region; get() returns 0.
+                let x = self.get(src);
+                self.append_literal(x)?;
+                src = (src + 1) % self.dict_size;
+                remaining -= 1;
+                continue;
+            }
+
+            let overlaps = src < self.cursor && src + chunk > self.cursor;
+            if overlaps {
+                // Source and dest overlap (small dist, e.g. RLE). Copy in
+                // strides of `dist` so each stride reads the repeated pattern.
+                let mut done = 0;
+                while done < chunk {
+                    let n = dist.min(chunk - done);
+                    self.buf
+                        .copy_within(src + done..src + done + n, self.cursor + done);
+                    done += n;
+                }
+            } else {
+                self.buf.copy_within(src..src + chunk, self.cursor);
+            }
+
+            self.cursor += chunk;
+            self.len += chunk;
+            src = (src + chunk) % self.dict_size;
+            remaining -= chunk;
+
+            if self.cursor == self.dict_size {
+                self.stream.write_all(self.buf.as_slice())?;
+                self.cursor = 0;
             }
         }
+
         Ok(())
     }
 
