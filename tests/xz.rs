@@ -60,6 +60,16 @@ fn decomp_big_file(compfile: &str, plainfile: &str) {
 }
 
 #[test]
+#[test]
+fn x86_bcj_filter_id_4() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+    decomp_big_file(
+        "tests/files/x86hello.xz",
+        "tests/files/x86hello.bin",
+    );
+}
+
 fn big_file() {
     #[cfg(feature = "enable_logging")]
     let _ = env_logger::try_init();
