@@ -144,3 +144,22 @@ fn test_xz_block_check_crc32_invalid() {
         "xz error: Invalid footer CRC32: expected 0x01234567 but got 0x8b0d303e"
     )
 }
+
+#[test]
+fn test_xz_backward_size_overflow() {
+    #[cfg(feature = "enable_logging")]
+    let _ = env_logger::try_init();
+
+    // Stream footer with Backward Size = 0xFFFF_FFFF.
+    let mut x: &[u8] = b"\xfd\x37\x7a\x58\x5a\x00\x00\x04\xe6\xd6\xb4\x46\x00\x00\x00\x00\
+                         \x1c\xdf\x44\x21\x78\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\
+                         \xff\xff\xff\xff\xff\xff\x00\x00";
+    let mut decomp: Vec<u8> = Vec::new();
+    let err_msg = lzma_rs::xz_decompress(&mut x, &mut decomp)
+        .unwrap_err()
+        .to_string();
+    assert_eq!(
+        err_msg,
+        "xz error: Invalid index size: expected 17179869184 but got 8"
+    )
+}

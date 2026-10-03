@@ -49,11 +49,11 @@ where
     {
         let mut digested = util::CrcDigestRead::new(input, &mut digest);
         let backward_size = digested.read_u32::<LittleEndian>()?;
-        if index_size as u32 != (backward_size + 1) << 2 {
+        let expected_index_size = (u64::from(backward_size) + 1) << 2;
+        if index_size as u64 != expected_index_size {
             return Err(error::Error::XzError(format!(
                 "Invalid index size: expected {} but got {}",
-                (backward_size + 1) << 2,
-                index_size
+                expected_index_size, index_size
             )));
         }
 
