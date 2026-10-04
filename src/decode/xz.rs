@@ -170,15 +170,29 @@ where
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FilterId {
     Lzma2,
+    /// LZMA_FILTER_X86 — BCJ for x86/x86-64 (issue #115).
+    X86,
 }
 
 fn get_filter_id(id: u64) -> error::Result<FilterId> {
     match id {
+        0x04 => Ok(FilterId::X86),
         0x21 => Ok(FilterId::Lzma2),
         _ => Err(error::Error::XzError(format!("Unknown filter id {}", id))),
+    }
+}
+
+fn bcj_start(props: &[u8]) -> error::Result<usize> {
+    match props.len() {
+        0 => Ok(0),
+        4 => Ok(u32::from_le_bytes([props[0], props[1], props[2], props[3]]) as usize),
+        n => Err(error::Error::XzError(format!(
+            "Invalid X86 filter properties size {}",
+            n
+        ))),
     }
 }
 
@@ -225,9 +239,11 @@ where
 
     let mut tmpbuf: Vec<u8> = Vec::new();
     let filters = block_header.filters;
-    for (i, filter) in filters.iter().enumerate() {
-        if i == 0 {
-            // TODO: use SubBufRead on input if packed_size is known?
+    // Encoder applies filters[0] .. last (LZMA2). Decoder applies the reverse:
+    // LZMA2 from the packed stream, then BCJ inverse on the bytes.
+    let mut first = true;
+    for filter in filters.iter().rev() {
+        if first {
             let packed_size = decode_filter(count_input, &mut tmpbuf, filter)?;
             if let Some(expected_packed_size) = block_header.packed_size {
                 if (packed_size as u64) != expected_packed_size {
@@ -237,15 +253,9 @@ where
                     )));
                 }
             }
+            first = false;
         } else {
-            let mut newbuf: Vec<u8> = Vec::new();
-            decode_filter(
-                &mut io::BufReader::new(tmpbuf.as_slice()),
-                &mut newbuf,
-                filter,
-            )?;
-            // TODO: does this move or copy?
-            tmpbuf = newbuf;
+            tmpbuf = apply_post_filter(&tmpbuf, filter)?;
         }
     }
 
@@ -350,6 +360,23 @@ where
             Lzma2Decoder::new().decompress(&mut count_input, output)?;
             Ok(count_input.count())
         }
+        FilterId::X86 => Err(error::Error::XzError(
+            "X86 BCJ is a post-filter, not a packed-stream decoder".to_string(),
+        )),
+    }
+}
+
+fn apply_post_filter(buf: &[u8], filter: &Filter) -> error::Result<Vec<u8>> {
+    match filter.filter_id {
+        FilterId::X86 => {
+            let start = bcj_start(&filter.props)?;
+            let mut out = buf.to_vec();
+            super::bcj::x86_decode(&mut out, start);
+            Ok(out)
+        }
+        FilterId::Lzma2 => Err(error::Error::XzError(
+            "LZMA2 cannot be applied as a post-filter".to_string(),
+        )),
     }
 }
 
